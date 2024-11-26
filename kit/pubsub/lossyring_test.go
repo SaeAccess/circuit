@@ -21,7 +21,7 @@ func TestLossyRing(t *testing.T) {
 		t.Fatalf("x")
 	}
 	if r.Len() != 2 {
-		t.Fatalf("len", r.Len())
+		t.Fatalf("len: %v", r.Len())
 	}
 	if !r.Send(3) {
 		t.Fatalf("x")
@@ -46,7 +46,7 @@ func TestLossyRing(t *testing.T) {
 }
 
 func smrz() []interface{} {
-	return []interface{}{1,2,3}
+	return []interface{}{1, 2, 3}
 }
 
 func TestPubSub(t *testing.T) {
