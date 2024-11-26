@@ -6,16 +6,14 @@
 //   2013 Petar Maymounkov <p@gocircuit.org>
 
 /*
-	Package client provides access to the circuit programming environment to user programs.
+Package client provides access to the circuit programming environment to user programs.
 */
 package client
 
 import (
 	"errors"
-	"math/rand"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/client/docker"
@@ -32,7 +30,7 @@ import (
 var _once sync.Once
 
 func _init(key []byte) {
-	rand.Seed(time.Now().UnixNano())
+	//rand.Seed(time.Now().UnixNano())
 	t := n.NewTransport(n.ChooseWorkerID(), &net.TCPAddr{}, key)
 	//fmt.Println(t.Addr().String())
 	circuit.Bind(lang.New(t))

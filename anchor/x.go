@@ -10,11 +10,11 @@ package anchor
 import (
 	"errors"
 
-	srv "github.com/gocircuit/circuit/element/server"
-	"github.com/gocircuit/circuit/element/proc"
-	"github.com/gocircuit/circuit/element/docker"
-	"github.com/gocircuit/circuit/element/valve"
 	"github.com/gocircuit/circuit/element/dns"
+	"github.com/gocircuit/circuit/element/docker"
+	"github.com/gocircuit/circuit/element/proc"
+	srv "github.com/gocircuit/circuit/element/server"
+	"github.com/gocircuit/circuit/element/valve"
 	"github.com/gocircuit/circuit/kit/pubsub"
 	"github.com/gocircuit/circuit/use/circuit"
 	xerrors "github.com/gocircuit/circuit/use/errors"
@@ -95,17 +95,17 @@ func (y YTerminal) Make(kind string, arg interface{}) (yelm interface{}, err err
 	}
 	switch kind {
 	case Chan:
-		return valve.YValve{r[0].(circuit.X)}, nil
+		return valve.YValve{X: r[0].(circuit.X)}, nil
 	case Proc:
-		return proc.YProc{r[0].(circuit.X)}, nil
+		return proc.YProc{X: r[0].(circuit.X)}, nil
 	case Docker:
-		return docker.YContainer{r[0].(circuit.X)}, nil
+		return docker.YContainer{X: r[0].(circuit.X)}, nil
 	case Nameserver:
-		return dns.YNameserver{r[0].(circuit.X)}, nil
+		return dns.YNameserver{X: r[0].(circuit.X)}, nil
 	case OnJoin:
-		return pubsub.YSubscription{r[0].(circuit.X)}, nil
+		return pubsub.YSubscription{X: r[0].(circuit.X)}, nil
 	case OnLeave:
-		return pubsub.YSubscription{r[0].(circuit.X)}, nil
+		return pubsub.YSubscription{X: r[0].(circuit.X)}, nil
 	}
 	return nil, errors.New("element kind not supported")
 }
@@ -115,19 +115,19 @@ func (y YTerminal) Get() (kind string, yelm interface{}) {
 	kind = r[0].(string)
 	switch kind {
 	case Server:
-		return Server, srv.YServer{r[1].(circuit.X)}
+		return Server, srv.YServer{X: r[1].(circuit.X)}
 	case Chan:
-		return Chan, valve.YValve{r[1].(circuit.X)}
+		return Chan, valve.YValve{X: r[1].(circuit.X)}
 	case Proc:
-		return Proc, proc.YProc{r[1].(circuit.X)}
+		return Proc, proc.YProc{X: r[1].(circuit.X)}
 	case Nameserver:
-		return Nameserver, dns.YNameserver{r[1].(circuit.X)}
+		return Nameserver, dns.YNameserver{X: r[1].(circuit.X)}
 	case Docker:
-		return Docker, docker.YContainer{r[1].(circuit.X)}
+		return Docker, docker.YContainer{X: r[1].(circuit.X)}
 	case OnJoin:
-		return OnJoin, pubsub.YSubscription{r[1].(circuit.X)}
+		return OnJoin, pubsub.YSubscription{X: r[1].(circuit.X)}
 	case OnLeave:
-		return OnLeave, pubsub.YSubscription{r[1].(circuit.X)}
+		return OnLeave, pubsub.YSubscription{X: r[1].(circuit.X)}
 	}
 	return "", nil
 }

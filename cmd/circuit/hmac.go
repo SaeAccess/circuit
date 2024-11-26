@@ -18,10 +18,12 @@ import (
 )
 
 func keygen(c *cli.Context) (err error) {
-	rand.Seed(time.Now().UnixNano())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	//rand.Seed(time.Now().UnixNano())
 	seed := make([]byte, 32)
 	for i := range seed {
-		seed[i] = byte(rand.Int31())
+		//seed[i] = byte(rand.Int31())
+		seed[i] = byte(r.Int31())
 	}
 	key := sha512.Sum512(seed)
 	text := base64.StdEncoding.EncodeToString(key[:])

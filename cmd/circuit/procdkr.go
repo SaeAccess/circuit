@@ -10,7 +10,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/gocircuit/circuit/client"
@@ -36,7 +36,7 @@ func mkproc(x *cli.Context) (err error) {
 		return errors.New("mkproc needs an anchor argument")
 	}
 	w, _ := parseGlob(args[0])
-	buf, _ := ioutil.ReadAll(os.Stdin)
+	buf, _ := io.ReadAll(os.Stdin)
 	var cmd client.Cmd
 	if err = json.Unmarshal(buf, &cmd); err != nil {
 		return errors.Wrapf(err, "command json not parsing: %v", err)
@@ -68,7 +68,7 @@ func mkdkr(x *cli.Context) (err error) {
 		return errors.New("mkdkr needs an anchor argument")
 	}
 	w, _ := parseGlob(args[0])
-	buf, _ := ioutil.ReadAll(os.Stdin)
+	buf, _ := io.ReadAll(os.Stdin)
 	var run docker.Run
 	if err = json.Unmarshal(buf, &run); err != nil {
 		return errors.Wrapf(err, "command json not parsing: %v", err)

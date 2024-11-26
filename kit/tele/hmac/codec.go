@@ -22,6 +22,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+
 	//"runtime/debug"
 	"strings"
 
@@ -30,9 +31,9 @@ import (
 )
 
 func NewTransport(key []byte) codec.CarrierTransport {
-	return &codecTransport {
+	return &codecTransport{
 		Frame: trace.NewFrame("hmac"),
-		key: key,
+		key:   key,
 	}
 }
 
@@ -70,7 +71,7 @@ func (l *codecListener) Addr() net.Addr {
 	return l.Listener.Addr()
 }
 
-func (l *codecListener) Accept() (codec.CarrierConn) {
+func (l *codecListener) Accept() codec.CarrierConn {
 	for {
 		c, err := l.Listener.Accept()
 		if err != nil {
@@ -88,9 +89,9 @@ func (l *codecListener) Accept() (codec.CarrierConn) {
 type codecConn struct {
 	trace.Frame
 	tcp *net.TCPConn
-	key  []byte // shared private key for authentication
-	r *rc4Reader
-	w *rc4Writer
+	key []byte // shared private key for authentication
+	r   *rc4Reader
+	w   *rc4Writer
 }
 
 func newCodecConn(f trace.Frame, tcp *net.TCPConn, key []byte) (*codecConn, error) {
@@ -98,9 +99,9 @@ func newCodecConn(f trace.Frame, tcp *net.TCPConn, key []byte) (*codecConn, erro
 		panic(err)
 	}
 	c := &codecConn{
-		Frame: f, 
-		tcp: tcp,
-		key: key,
+		Frame: f,
+		tcp:   tcp,
+		key:   key,
 	}
 	if err := c.auth(); err != nil {
 		return nil, err
@@ -116,7 +117,6 @@ func newCodecConn(f trace.Frame, tcp *net.TCPConn, key []byte) (*codecConn, erro
 // Compute send half-key as KSEND = (Ying, Yang)
 // Computer receive half-key as KRECV = (Yang, Ying)
 // Initialize RC4 send and receive coders with keys KSEND and KRECV, respectively
-//
 func (c *codecConn) auth() error {
 	// Prepare our half of a random pad, the ying
 	ying := pickHalfKey()
@@ -159,7 +159,7 @@ func (c *codecConn) auth() error {
 		return errors.New("authentication error")
 	}
 	// Create encryption streams
-	c.r = newRC4Reader(br, append(ying, yang...)) 
+	c.r = newRC4Reader(br, append(ying, yang...))
 	c.w = newRC4Writer(c.tcp, append(yang, ying...))
 	return nil
 }
@@ -170,7 +170,7 @@ type authMsg struct {
 }
 
 func (m *authMsg) String() string {
-	return fmt.Sprintf("hmac=%s\npad=%s", 
+	return fmt.Sprintf("hmac=%s\npad=%s",
 		base64.StdEncoding.EncodeToString(m.Sign),
 		base64.StdEncoding.EncodeToString(m.Yang),
 	)
@@ -195,7 +195,7 @@ func (m *authMsg) Read(r *bufio.Reader) (err error) {
 
 func pickHalfKey() []byte {
 	seed := make([]byte, 32)
-	for i, _ := range seed {
+	for i := range seed {
 		seed[i] = byte(rand.Int31())
 	}
 	key := sha512.Sum512(seed)
@@ -237,7 +237,7 @@ func (c *codecConn) Close() (err error) {
 
 type rc4Writer struct {
 	cipher *rc4.Cipher
-	w io.Writer
+	w      io.Writer
 }
 
 func newRC4Writer(w io.Writer, key []byte) *rc4Writer {
@@ -247,7 +247,7 @@ func newRC4Writer(w io.Writer, key []byte) *rc4Writer {
 	}
 	return &rc4Writer{
 		cipher: cipher,
-		w: w,
+		w:      w,
 	}
 }
 
@@ -258,7 +258,7 @@ func (w *rc4Writer) Write(p []byte) (n int, err error) {
 
 type rc4Reader struct {
 	cipher *rc4.Cipher
-	r *bufio.Reader
+	r      *bufio.Reader
 }
 
 func newRC4Reader(r *bufio.Reader, key []byte) *rc4Reader {
@@ -268,7 +268,7 @@ func newRC4Reader(r *bufio.Reader, key []byte) *rc4Reader {
 	}
 	return &rc4Reader{
 		cipher: cipher,
-		r: r,
+		r:      r,
 	}
 }
 

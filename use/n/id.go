@@ -12,6 +12,7 @@ import (
 	"hash/fnv"
 	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/gocircuit/circuit/use/errors"
 )
@@ -28,7 +29,8 @@ func (r WorkerID) String() string {
 
 // ChooseWorkerID returns a random worker ID.
 func ChooseWorkerID() WorkerID {
-	return Int64WorkerID(rand.Int63())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return Int64WorkerID(r.Int63())
 }
 
 func Int64WorkerID(src int64) WorkerID {

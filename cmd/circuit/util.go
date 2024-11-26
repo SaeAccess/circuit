@@ -10,7 +10,6 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -25,11 +24,11 @@ func fatalf(format string, arg ...interface{}) {
 
 func readkey(x *cli.Context) (key []byte) {
 	var hmac string
-	if hmac = x.String("hmac"); x.IsSet("hmac") == false {
+	if hmac = x.String("hmac"); !x.IsSet("hmac") {
 		return nil
 	}
 
-	b64, err := ioutil.ReadFile(hmac)
+	b64, err := os.ReadFile(hmac)
 	if err != nil {
 		fatalf("problem reading private key file (%s): %v", hmac, err)
 	}
@@ -58,7 +57,8 @@ func dial(x *cli.Context) *client.Client {
 		return client.DialDiscover(x.String("discover"), readkey(x))
 
 	case os.Getenv("CIRCUIT") != "":
-		buf, err := ioutil.ReadFile(os.Getenv("CIRCUIT"))
+		//buf, err := ioutil.ReadFile(os.Getenv("CIRCUIT"))
+		buf, err := os.ReadFile(os.Getenv("CIRCUIT"))
 		if err != nil {
 			fatalf("circuit environment file %s is not readable: %v", os.Getenv("CIRCUIT"), err)
 		}

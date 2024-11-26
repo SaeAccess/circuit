@@ -25,13 +25,14 @@ func (rid ReceiverID) String() string {
 }
 
 func ChooseReceiverID() ReceiverID {
-	return ReceiverID(rand.Int63())
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return ReceiverID(r.Int63())
 }
 
 var nonce ReceiverID // random nonce, unique to this process
 
 func init() {
-	rand.Seed(time.Now().UnixNano()) // main()'s seeding runs too late to capture this init
+	//rand.Seed(time.Now().UnixNano()) // main()'s seeding runs too late to capture this init
 	nonce = ChooseReceiverID()
 }
 
