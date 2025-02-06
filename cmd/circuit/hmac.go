@@ -14,8 +14,20 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
+
+func init() {
+	var cmds = []*cli.Command{
+		{
+			Name:   "keygen",
+			Usage:  "Generate a new random HMAC key",
+			Action: keygen,
+		},
+	}
+
+	RegisterCommand(cmds...)
+}
 
 func keygen(c *cli.Context) (err error) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))

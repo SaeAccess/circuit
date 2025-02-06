@@ -8,10 +8,11 @@
 package lang
 
 import (
-	"github.com/gocircuit/circuit/sys/lang/types"
 	"fmt"
 	"reflect"
 	"runtime/debug"
+
+	"github.com/gocircuit/circuit/sys/lang/types"
 )
 
 // call invokes the method of r encoded by f with respect to t, with arguments a
@@ -25,9 +26,9 @@ func call(recv reflect.Value, t *types.TypeChar, id types.FuncID, arg []interfac
 		t := "server-side runtime.call(…):\n" + string(debug.Stack())
 		switch q := p.(type) {
 		case error:
-			err = NewError(q.Error() + "\n" + t)
+			err = NewError("%s", q.Error()+"\n"+t)
 		default:
-			err = NewError(fmt.Sprintf("%#v\n%s", q, t))
+			err = NewError("%s", fmt.Sprintf("%#v\n%s", q, t))
 		}
 	}()
 

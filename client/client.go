@@ -17,6 +17,8 @@ import (
 
 	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/client/docker"
+	"github.com/gocircuit/circuit/client/podman"
+	cwasm "github.com/gocircuit/circuit/client/wasm"
 	"github.com/gocircuit/circuit/kit/assemble"
 	_ "github.com/gocircuit/circuit/kit/debug/kill"
 	"github.com/gocircuit/circuit/sys/lang"
@@ -60,7 +62,7 @@ func Dial(addr string, authkey []byte) *Client {
 	if err != nil {
 		panic("circuit address does not parse")
 	}
-	c.y = locus.YLocus{circuit.Dial(w, "locus")}
+	c.y = locus.YLocus{X: circuit.Dial(w, "locus")}
 	return c
 }
 
@@ -74,7 +76,7 @@ func DialDiscover(multicast string, authkey []byte) *Client {
 	})
 	c := &Client{}
 	dialback := assemble.NewAssembler(circuit.ServerAddr(), mcast).AssembleClient()
-	c.y = locus.YLocus{circuit.Dial(dialback, "locus")}
+	c.y = locus.YLocus{X: circuit.Dial(dialback, "locus")}
 	return c
 }
 
@@ -116,7 +118,7 @@ func (c *Client) View() map[string]Anchor {
 
 func (c *Client) newTerminal(xterm circuit.X, xkin tissue.KinAvatar) terminal {
 	return terminal{
-		y: anchor.YTerminal{xterm},
+		y: anchor.YTerminal{X: xterm},
 		k: xkin,
 	}
 }
@@ -153,6 +155,23 @@ func (c *Client) MakeOnJoin() (Subscription, error) {
 
 // MakeOnLeave is an Anchor interface method, not applicable to the root-level anchor.
 func (c *Client) MakeOnLeave() (Subscription, error) {
+	return nil, errors.New("cannot create elements outside of servers")
+}
+
+func (t *Client) MakeWasm() (cwasm.Wasm, error) {
+	return nil, errors.New("cannot create elements outside of servers")
+}
+
+func (t *Client) MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error) {
+	return nil, errors.New("cannot create elements outside of servers")
+}
+
+func (t *Client) MakeNetwork() (podman.Network, error) {
+	return nil, errors.New("cannot create elements outside of servers")
+}
+
+// MakeVolume…
+func (t *Client) MakeVolume() (podman.Volume, error) {
 	return nil, errors.New("cannot create elements outside of servers")
 }
 

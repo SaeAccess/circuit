@@ -16,6 +16,7 @@ import (
 	"path"
 
 	"github.com/gocircuit/circuit/element/docker"
+	p "github.com/gocircuit/circuit/element/podman/container"
 	"github.com/gocircuit/circuit/kit/assemble"
 	"github.com/gocircuit/circuit/tissue"
 	"github.com/gocircuit/circuit/tissue/locus"
@@ -23,19 +24,50 @@ import (
 	"github.com/gocircuit/circuit/use/n"
 	"github.com/pkg/errors"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
+
+func init() {
+	cmds := []*cli.Command{
+		// circuit
+		{
+			Name:  "start",
+			Usage: "Run a circuit worker on this machine",
+			Before: func(c *cli.Context) error {
+				if cmd, err := p.ResolvePodman(); err != nil {
+					return errors.Wrapf(err, "cannot use podman: %v", err)
+				} else {
+					log.Printf("Enabling podman elements, using %s", cmd)
+				}
+
+				if c.Bool("docker") {
+					cmd, e := docker.Init()
+					if e != nil {
+						return errors.Wrapf(e, "cannot use docker: %v", e)
+					}
+					log.Printf("Enabling docker elements, using %s", cmd)
+				}
+
+				return nil
+			},
+			Action: server,
+			Flags: []cli.Flag{
+				&cli.StringFlag{Name: "addr", Aliases: []string{"a"}, Value: "0.0.0.0:0", Usage: "Address of circuit server."},
+				&cli.StringFlag{Name: "if", Value: "", Usage: "Bind any available port on the specified interface."},
+				&cli.StringFlag{Name: "var", Value: "", Usage: "Lock and log directory for the circuit server."},
+				&cli.StringFlag{Name: "join", Aliases: []string{"j"}, Value: "", Usage: "Join a circuit through a current member by address."},
+				&cli.StringFlag{Name: "hmac", Value: "", Usage: "File with HMAC credentials for HMAC/RC4 transport security.", EnvVars: []string{"CIRCUIT_HMAC"}},
+				&cli.StringFlag{Name: "discover", Value: "228.8.8.8:8822", Usage: "Multicast address for peer server discovery", EnvVars: []string{"CIRCUIT_DISCOVER"}},
+				&cli.BoolFlag{Name: "docker", Usage: "Enable docker elements; docker command must be executable"},
+			},
+		},
+	}
+	RegisterCommand(cmds...)
+}
 
 func server(c *cli.Context) (err error) {
 	println("CIRCUIT 2015 gocircuit.org")
 
-	if c.Bool("docker") {
-		cmd, e := docker.Init()
-		if e != nil {
-			return errors.Wrapf(e, "cannot use docker: %v", e)
-		}
-		log.Printf("Enabling docker elements, using %s", cmd)
-	}
 	// parse arguments
 	var tcpaddr = parseAddr(c) // server bind address
 	var join n.Addr            // join address of another circuit server
@@ -44,6 +76,10 @@ func server(c *cli.Context) (err error) {
 			return errors.Wrapf(err, "join address does not parse (%s)", err)
 		}
 	}
+
+	// TODO make multicast be optional, add new flag multicast with false as default, also
+	// change Value in discover to "" and put a defaultValue to 228.xxx
+
 	var multicast = parseDiscover(c)
 	// server instance working directory
 	var varDir string
@@ -78,8 +114,8 @@ func server(c *cli.Context) (err error) {
 	circuit.Listen(tissue.ServiceName, xkin)
 	circuit.Listen(LocusName, xlocus)
 
-	<-(chan int)(nil)
-	return nil
+	select {}
+	//return nil
 }
 
 func parseDiscover(c *cli.Context) *net.UDPAddr {

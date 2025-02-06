@@ -15,7 +15,7 @@ import (
 	"github.com/gocircuit/circuit/client"
 	"github.com/pkg/errors"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func recv(x *cli.Context) (err error) {
@@ -27,10 +27,10 @@ func recv(x *cli.Context) (err error) {
 
 	c := dial(x)
 	args := x.Args()
-	if len(args) != 1 {
+	if args.Len() != 1 {
 		return errors.New("recv needs one anchor argument")
 	}
-	w, _ := parseGlob(args[0])
+	w, _ := parseGlob(args.First())
 	switch u := c.Walk(w).Get().(type) {
 	case client.Chan:
 		msgr, err := u.Recv()

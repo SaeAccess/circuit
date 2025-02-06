@@ -9,23 +9,23 @@ package anchor
 
 import (
 	"errors"
-	"io"
+	"fmt"
 	"log"
+	"sync"
 
-	ds "github.com/gocircuit/circuit/client/docker"
-	"github.com/gocircuit/circuit/element/dns"
-	"github.com/gocircuit/circuit/element/docker"
-	"github.com/gocircuit/circuit/element/proc"
 	srv "github.com/gocircuit/circuit/element/server"
-	"github.com/gocircuit/circuit/element/valve"
 	"github.com/gocircuit/circuit/kit/pubsub"
 	"github.com/gocircuit/circuit/use/circuit"
 )
 
+// Element are the values placed in anchor nodes
 type Element interface {
 	Scrub()
 	X() circuit.X
 }
+
+type ElementFactory func(t *Terminal, arg any) (Element, error)
+type YFactory func(x circuit.X) (any, error)
 
 const (
 	Server     = "server"
@@ -35,7 +35,32 @@ const (
 	Nameserver = "dns"
 	OnJoin     = "@join"
 	OnLeave    = "@leave"
+
+	// wasm
+	Wasm = "wasm"
+
+	// oci container support by podman/containerd
+	Container = "container"
+
+	// Network
+	Network = "network"
+
+	// Volume
+	Volume = "volume"
 )
+
+func init() {
+	registerServer()
+	registerOnJoin()
+	registerOnLeave()
+}
+
+var efRepo = newElementFactoryRepo()
+
+// RegisterElement registers an element factory
+func RegisterElement(kind string, efactory ElementFactory, yfactory YFactory) {
+	efRepo.Register(kind, efactory, yfactory)
+}
 
 // Terminal presents a facade to *Anchor with added element manipulation methods
 type Terminal struct {
@@ -105,101 +130,32 @@ func (t *Terminal) Attach(kind string, elm Element) {
 	t.carrier().Set(u)
 }
 
-func (t *Terminal) Make(kind string, arg interface{}) (elem Element, err error) {
-	log.Printf("Making %s at %s, using %v", kind, t.carrier().Path(), arg)
+func (t *Terminal) Make(kind string, arg interface{}) (eleme Element, err error) {
+	log.Printf("Detaching %s", t.carrier().Path())
 	t.carrier().TxLock()
 	defer t.carrier().TxUnlock()
 	if t.carrier().Get() != nil {
 		return nil, errors.New("anchor already has an element")
 	}
-	switch kind {
-	case Chan:
-		capacity, ok := arg.(int)
-		if !ok {
-			return nil, errors.New("invalid argument")
-		}
-		u := &urn{
-			kind: Chan,
-			elem: &scrubValve{t, valve.MakeValve(capacity)},
-		}
-		t.carrier().Set(u)
-		return u.elem, nil
 
-	case Proc:
-		cmd, ok := arg.(proc.Cmd)
-		if !ok {
-			return nil, errors.New("invalid argument")
-		}
-		u := &urn{
-			kind: Proc,
-			elem: proc.MakeProc(cmd),
-		}
-		t.carrier().Set(u)
-		go func() {
-			defer func() {
-				recover()
-			}()
-			if cmd.Scrub {
-				defer t.Scrub()
-			}
-			u.elem.(proc.Proc).Wait()
-		}()
-		return u.elem, nil
-
-	case Docker:
-		run, ok := arg.(ds.Run)
-		if !ok {
-			return nil, errors.New("invalid argument")
-		}
-		x, err := docker.MakeContainer(run)
-		if err != nil {
-			return nil, err
-		}
-		u := &urn{
-			kind: Docker,
-			elem: x,
-		}
-		t.carrier().Set(u)
-		go func() {
-			defer func() {
-				recover()
-			}()
-			if run.Scrub {
-				defer t.Scrub()
-			}
-			u.elem.(docker.Container).Wait()
-		}()
-		return u.elem, nil
-
-	case Nameserver:
-		ns, err := dns.MakeNameserver(arg.(string))
-		if err != nil {
-			return nil, err
-		}
-		u := &urn{
-			kind: Nameserver,
-			elem: ns,
-		}
-		t.carrier().Set(u)
-		return u.elem, nil
-
-	case OnJoin:
-		u := &urn{
-			kind: OnJoin,
-			elem: t.genus.NewArrivals(),
-		}
-		t.carrier().Set(u)
-		return u.elem, nil
-
-	case OnLeave:
-		u := &urn{
-			kind: OnLeave,
-			elem: t.genus.NewDepartures(),
-		}
-		t.carrier().Set(u)
-		return u.elem, nil
+	// get the element factory
+	factory, ok := efRepo.GetEF(kind)
+	if !ok {
+		return nil, fmt.Errorf("element kind not known, kind=%s", kind)
 	}
-	return nil, errors.New("element kind not known")
+
+	// create the element
+	eleme, err = factory(t, arg)
+	if err != nil {
+		return nil, err
+	}
+
+	u := &urn{
+		kind: kind,
+		elem: eleme,
+	}
+	t.carrier().Set(u)
+	return u.elem, nil
 }
 
 func (t *Terminal) Get() (string, Element) {
@@ -227,25 +183,72 @@ func (t *Terminal) Scrub() {
 	t.carrier().Set(nil)
 }
 
-type scrubValve struct {
-	t *Terminal
-	valve.Valve
+type elementFactoryRepo struct {
+	ef sync.Map // map[string]ElementFactory
 }
 
-func (v *scrubValve) Close() error {
-	defer func() {
-		if v.Valve.IsDone() {
-			v.t.Scrub()
-		}
-	}()
-	return v.Valve.Close()
+type factoryItem struct {
+	ef ElementFactory
+	yf YFactory
 }
 
-func (v *scrubValve) Recv() (io.ReadCloser, error) {
-	defer func() {
-		if v.Valve.IsDone() {
-			v.t.Scrub()
-		}
-	}()
-	return v.Valve.Recv()
+func newElementFactoryRepo() *elementFactoryRepo {
+	return &elementFactoryRepo{}
+}
+
+func (r *elementFactoryRepo) Register(kind string, efactory ElementFactory, yfactory YFactory) {
+	// check if already registered
+	if _, ok := r.GetEF(kind); ok {
+		panic(fmt.Sprintf("%s element already registered", kind))
+	}
+	r.ef.Store(kind, factoryItem{efactory, yfactory})
+}
+
+func (r *elementFactoryRepo) GetEF(kind string) (ElementFactory, bool) {
+	v, ok := r.ef.Load(kind)
+	if !ok {
+		return nil, false
+	}
+	return v.(factoryItem).ef, true
+}
+
+func (r *elementFactoryRepo) GetYF(kind string) (YFactory, bool) {
+	v, ok := r.ef.Load(kind)
+	if !ok {
+		return nil, false
+	}
+	return v.(factoryItem).yf, true
+}
+
+func registerServer() {
+	RegisterElement(Server,
+		func(t *Terminal, arg any) (Element, error) {
+			panic("element factory not implemented for server")
+		},
+
+		func(x circuit.X) (any, error) {
+			return srv.YServer{X: x}, nil
+		})
+}
+
+func registerOnJoin() {
+	RegisterElement(OnJoin,
+		func(t *Terminal, arg any) (Element, error) {
+			return t.genus.NewArrivals(), nil
+		},
+
+		func(x circuit.X) (any, error) {
+			return pubsub.YSubscription{X: x}, nil
+		})
+}
+
+func registerOnLeave() {
+	RegisterElement(OnLeave,
+		func(t *Terminal, arg any) (Element, error) {
+			return t.genus.NewDepartures(), nil
+		},
+
+		func(x circuit.X) (any, error) {
+			return pubsub.YSubscription{X: x}, nil
+		})
 }

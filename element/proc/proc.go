@@ -17,6 +17,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/kit/interruptible"
 	"github.com/gocircuit/circuit/use/circuit"
 )
@@ -47,8 +48,36 @@ type proc struct {
 		scrb bool
 		abr  chan<- struct{}
 		wait chan<- error
-		exit error // exit set by waiter
+		exit error // exit set by waiter}
 	}
+}
+
+func init() {
+	anchor.RegisterElement("proc",
+		func(t *anchor.Terminal, arg any) (anchor.Element, error) {
+			cmd, ok := arg.(Cmd)
+			if !ok {
+				return nil, errors.New("invalid argument")
+			}
+			elem := MakeProc(cmd)
+
+			go func() {
+				defer func() {
+					recover()
+				}()
+				if cmd.Scrub {
+					defer t.Scrub()
+				}
+				elem.Wait()
+			}()
+
+			return elem, nil
+		},
+
+		func(x circuit.X) (any, error) {
+			return YProc{x}, nil
+		})
+
 }
 
 func MakeProc(cmd Cmd) Proc {

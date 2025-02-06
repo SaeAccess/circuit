@@ -10,6 +10,8 @@ package client
 import (
 	// "fmt"
 
+	"fmt"
+
 	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/element/dns"
 	"github.com/gocircuit/circuit/element/proc"
@@ -19,7 +21,10 @@ import (
 	"github.com/gocircuit/circuit/tissue"
 
 	cdocker "github.com/gocircuit/circuit/client/docker"
+	"github.com/gocircuit/circuit/client/podman"
+	cwasm "github.com/gocircuit/circuit/client/wasm"
 	edocker "github.com/gocircuit/circuit/element/docker"
+	pm "github.com/gocircuit/circuit/element/podman/container"
 )
 
 // An Anchor represents a location in the global anchor namespace of a circuit
@@ -39,7 +44,6 @@ import (
 // not present, and are garbage-collected when not used or referenced.
 // Therefore the interface allows users to access arbitrary paths without
 // having to create them first.
-//
 type Anchor interface {
 
 	// Addr returns the address of the circuit server hosting this anchor.
@@ -79,6 +83,23 @@ type Anchor interface {
 	// MakeOnLeave…
 	MakeOnLeave() (Subscription, error)
 
+	// TODO need to add WASM and Container elements
+
+	// MakeWasm…
+	MakeWasm() (cwasm.Wasm, error)
+
+	// MakeContaner  creates a podman container element
+	MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error)
+
+	// RunContainer...
+	//RunContainer(c *podman.ContainerRunOptions) (podman.Container, error)
+
+	// MakeNetwork…
+	MakeNetwork() (podman.Network, error)
+
+	// MakeVolume…
+	MakeVolume() (podman.Volume, error)
+
 	// Get returns a handle for the circuit element (Chan, Proc, Subscription, Server, etc)
 	// stored at this anchor, and nil otherwise.
 	// Panics indicate that the server hosting the anchor and its element has already died.
@@ -90,6 +111,11 @@ type Anchor interface {
 
 	// Path returns the path to this anchor
 	Path() string
+}
+
+// Named interface provides a namme for elements
+type Named interface {
+	Name() string
 }
 
 // Split breaks up an anchor path into components.
@@ -188,6 +214,31 @@ func (t terminal) MakeOnLeave() (Subscription, error) {
 	return ysubSub{ysub.(pubsub.YSubscription)}, nil
 }
 
+func (t terminal) MakeWasm() (cwasm.Wasm, error) {
+	ywasm, err := t.y.Make(anchor.Wasm, "")
+	if err != nil {
+		return nil, err
+	}
+	return ywasm.(cwasm.Wasm), nil
+}
+
+func (t terminal) MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error) {
+	ycon, err := t.y.Make(anchor.Container, c)
+	if err != nil {
+		return nil, err
+	}
+	return ycon.(podman.Container), nil
+}
+
+func (t terminal) MakeNetwork() (podman.Network, error) {
+	return nil, nil
+}
+
+// MakeVolume…
+func (t terminal) MakeVolume() (podman.Volume, error) {
+	return nil, nil
+}
+
 func (t terminal) Get() interface{} {
 	kind, y := t.y.Get()
 	if y == nil {
@@ -208,8 +259,13 @@ func (t terminal) Get() interface{} {
 		return ysubSub{y.(pubsub.YSubscription)}
 	case anchor.OnLeave:
 		return ysubSub{y.(pubsub.YSubscription)}
+
+	// TODO need to add WASM and Container elements
+	case anchor.Container:
+		return y.(pm.YContainer)
 	}
-	panic("client/circuit mismatch")
+
+	panic(fmt.Sprintf("client/circuit mismatch, kind=%v", kind))
 }
 
 func (t terminal) Scrub() {

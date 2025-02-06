@@ -6,31 +6,29 @@
 //   2014 Petar Maymounkov <p@gocircuit.org>
 
 /*
+Virus is a simple, mildly-resilient to failure mechanism that runs around a cluster
+and delivers its payload (a process execution), in a self-sustained fashion.
 
-	Virus is a simple, mildly-resilient to failure mechanism that runs around a cluster
-	and delivers its payload (a process execution), in a self-sustained fashion.
+The virus mechanism contains two parts: a payload process and a nucleus process.
 
-	The virus mechanism contains two parts: a payload process and a nucleus process.
+The payload can be any OS process, available locally as a binary.
 
-	The payload can be any OS process, available locally as a binary.
+The nucleus is embodied in this circuit application. It executes the payload OS process
+on a random machine in the circuit cluster. Then it installs itself on a machine different
+from that of the payload process, and proceeds to watch the payload until it dies.
 
-	The nucleus is embodied in this circuit application. It executes the payload OS process
-	on a random machine in the circuit cluster. Then it installs itself on a machine different
-	from that of the payload process, and proceeds to watch the payload until it dies.
-
-	When the payload dies, the nucleus executes a new payload instance on another 
-	randomly chosen host, and replaces itself with a new nucleus process on yet
-	another new random host. And so on ...
-
+When the payload dies, the nucleus executes a new payload instance on another
+randomly chosen host, and replaces itself with a new nucleus process on yet
+another new random host. And so on ...
 */
 package main
 
 import (
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
-	"os"
 	"strconv"
 	"time"
 
@@ -61,23 +59,25 @@ func waitFotPayloadDeath(c *client.Client, myAnchor, payloadAnchor string, epoch
 	// t.Scrub()
 
 	// Wait a touch to prevent spinning, if the payload exits immediately every time it is run.
-	time.Sleep(time.Second/2)
+	time.Sleep(time.Second / 2)
 	return
 }
 
 // The initial invocation of the virus:
-//	virus DIALIN_CIRCUIT
-// To invoke the virus in the role of a nucleus process:
-// 	virus DIALIN_CIRCUIT BACKCHAN_ANCHOR PAYLOAD_ANCHOR SELF_ANCHOR EPOCH
 //
+//	virus DIALIN_CIRCUIT
+//
+// To invoke the virus in the role of a nucleus process:
+//
+//	virus DIALIN_CIRCUIT BACKCHAN_ANCHOR PAYLOAD_ANCHOR SELF_ANCHOR EPOCH
 func main() {
 	// Parse arguments
 	var (
-		err error
-		isNucleus bool
-		myAnchor string
+		err           error
+		isNucleus     bool
+		myAnchor      string
 		payloadAnchor string
-		epoch int
+		epoch         int
 	)
 	switch len(os.Args) {
 	case 2: // initial command-line invocation
@@ -145,14 +145,15 @@ func acquireBackChan(c *client.Client, backChan client.Chan, epoch int) io.Write
 func spawnPayload(c *client.Client, epoch int) (payloadAnchor string) {
 	// Start the payload process
 	service := client.Cmd{
-		Path: "/usr/bin/say", // say is a standard OSX command which speaks, so it's easy to hear the virus in action.
-		Args: []string{"i am a virus"},
+		//Path: "/usr/bin/sayhe", // say is a standard OSX command which speaks, so it's easy to hear the virus in action.
+		Path:  "/usr/bin/echo", // say is a standard OSX command which speaks, so it's easy to hear the virus in action.
+		Args:  []string{"i am a virus"},
 		Scrub: true,
 	}
 	// Randomly choose a circuit server to host the virus payload.
 	a := pickServer(c)
 	// Run the payload
-	payloadEpoch := strconv.Itoa(epoch+1)
+	payloadEpoch := strconv.Itoa(epoch + 1)
 	pservice, err := a.Walk([]string{"virus", "payload", payloadEpoch}).MakeProc(service)
 	if err != nil {
 		println("payload not created:", err.Error())
@@ -173,16 +174,16 @@ func spawnNucleus(c *client.Client, backAnchor, payloadAnchor string, epoch int)
 	// and then start a payload as well as a new nucleus elsewhere, over and over again.
 	b := pickServer(c)
 	virus, _ := filepath.Abs(os.Args[0]) // We assume that the virus binary is on the same path everywhere
-	nucleusEpoch := strconv.Itoa(epoch+1)
+	nucleusEpoch := strconv.Itoa(epoch + 1)
 	nucleusAnchor := path.Join("/", b.ServerID(), "virus", "nucleus", nucleusEpoch)
 	nucleus := client.Cmd{
 		Path: virus,
 		Args: []string{
-			b.Addr(), // dial-in circuit server address
-			backAnchor, // virus back channel anchor
+			b.Addr(),      // dial-in circuit server address
+			backAnchor,    // virus back channel anchor
 			payloadAnchor, // payload anchor
 			nucleusAnchor, // anchor of the spawned nucleus itself
-			nucleusEpoch, // epoch
+			nucleusEpoch,  // epoch
 		},
 		Scrub: true,
 	}

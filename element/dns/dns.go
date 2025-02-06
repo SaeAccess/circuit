@@ -11,8 +11,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/gocircuit/circuit/github.com/miekg/dns"
+	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/use/circuit"
+	"github.com/miekg/dns"
 )
 
 type Nameserver interface {
@@ -26,8 +27,23 @@ type Nameserver interface {
 type nameserver struct {
 	sync.Mutex
 	server *dns.Server
-	addr net.Addr
-	rr map[string][]dns.RR // name -> rr
+	addr   net.Addr
+	rr     map[string][]dns.RR // name -> rr
+}
+
+func init() {
+	anchor.RegisterElement("dns",
+		func(t *anchor.Terminal, arg any) (anchor.Element, error) {
+			ns, err := MakeNameserver(arg.(string))
+			if err != nil {
+				return nil, err
+			}
+			return ns, nil
+		},
+
+		func(x circuit.X) (any, error) {
+			return YNameserver{x}, nil
+		})
 }
 
 func MakeNameserver(addr string) (_ Nameserver, err error) {
@@ -47,7 +63,7 @@ func (ns *nameserver) startUdpServer(addr string) error {
 	}
 	ns.server = &dns.Server{
 		PacketConn: pc,
-		Handler: ns,
+		Handler:    ns,
 	}
 	ns.addr = pc.LocalAddr()
 	go func() {

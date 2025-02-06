@@ -9,9 +9,11 @@ package valve
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"sync"
 
+	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/use/circuit"
 )
 
@@ -51,6 +53,22 @@ type Stat struct {
 	Aborted bool `json:"aborted"`
 	NumSend int  `json:"numsend"`
 	NumRecv int  `json:"numrecv"`
+}
+
+func init() {
+	anchor.RegisterElement("chan",
+		func(t *anchor.Terminal, arg any) (anchor.Element, error) {
+			capacity, ok := arg.(int)
+			if !ok {
+				return nil, errors.New("invalid argument")
+			}
+
+			return &scrubValve{t, MakeValve(capacity)}, nil
+		},
+
+		func(x circuit.X) (any, error) {
+			return YValve{X: x}, nil
+		})
 }
 
 // Sender-receiver pipe capacity (once matched)
@@ -103,4 +121,27 @@ func (v *valve) Stat() Stat {
 	v.ctrl.Lock()
 	defer v.ctrl.Unlock()
 	return v.ctrl.stat
+}
+
+type scrubValve struct {
+	t *anchor.Terminal
+	Valve
+}
+
+func (v *scrubValve) Close() error {
+	defer func() {
+		if v.Valve.IsDone() {
+			v.t.Scrub()
+		}
+	}()
+	return v.Valve.Close()
+}
+
+func (v *scrubValve) Recv() (io.ReadCloser, error) {
+	defer func() {
+		if v.Valve.IsDone() {
+			v.t.Scrub()
+		}
+	}()
+	return v.Valve.Recv()
 }

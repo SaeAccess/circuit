@@ -27,6 +27,12 @@ import (
 	"github.com/gocircuit/circuit/use/n"
 )
 
+func init() {
+	// cmds := []*cli.Command{
+
+	// }
+}
+
 func load(addr *net.TCPAddr, vardir string, key []byte) n.Addr {
 	//debug.InstallCtrlCPanic()
 

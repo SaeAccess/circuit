@@ -9,17 +9,18 @@ package docker
 
 import (
 	"io"
-	
+
+	ds "github.com/gocircuit/circuit/client/docker"
 	xio "github.com/gocircuit/circuit/kit/x/io"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/gocircuit/circuit/use/errors"
-	ds "github.com/gocircuit/circuit/client/docker"
 )
 
 func init() {
 	circuit.RegisterValue(XContainer{})
 }
 
+// XContainer is a circuit container that wraps a Docker container skeleton impl.
 type XContainer struct {
 	Container
 }
@@ -50,6 +51,7 @@ func (x XContainer) Peek() (*ds.Stat, error) {
 	return stat, errors.Pack(err)
 }
 
+// YContainer is a circuit container that wraps a Docker container stub/proxy impl.
 type YContainer struct {
 	X circuit.X
 }

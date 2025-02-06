@@ -12,6 +12,7 @@ import (
 	"sync"
 )
 
+// TODO make this into a generic type (type Slot[T any] struct)
 // Slot is a synchronized interface value, which can be set once and read many times
 type Slot struct {
 	Name string

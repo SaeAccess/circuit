@@ -16,28 +16,55 @@ import (
 	"github.com/gocircuit/circuit/client"
 	"github.com/gocircuit/circuit/client/docker"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
+
+func init() {
+	cmds := []*cli.Command{
+		{
+			Name:      "ls",
+			Usage:     "List circuit elements",
+			Args:      true,
+			ArgsUsage: "glob",
+			Action:    ls,
+			Flags: []cli.Flag{
+				&cli.StringFlag{Name: "dial", Aliases: []string{"d"}, Value: "", Usage: "circuit member to dial into"},
+				&cli.StringFlag{Name: "discover", Value: "228.8.8.8:8822", Usage: "Multicast address for peer server discovery", EnvVars: []string{"CIRCUIT_DISCOVER"}},
+				&cli.BoolFlag{Name: "long", Aliases: []string{"l"}, Usage: "show detailed anchor information"},
+				&cli.BoolFlag{Name: "depth", Aliases: []string{"de"}, Usage: "traverse anchors in depth-first order (leaves first)"},
+				&cli.StringFlag{Name: "hmac", Value: "", Usage: "File containing HMAC credentials. Use RC4 encryption.", EnvVars: []string{"CIRCUIT_HMAC"}},
+			},
+		},
+	}
+
+	RegisterCommand(cmds...)
+}
 
 // circuit ls /Q123/apps/charlie
 // circuit ls /...
 func ls(x *cli.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Wrapf(r.(error), "error, likely due to missing server or misspelled anchor: %v", r)
+			var ok bool
+			if err, ok = r.(error); !ok {
+				err = errors.Errorf("%v", r)
+			} else {
+				err = errors.Wrapf(r.(error), "error, likely due to missing server or misspelled anchor: %v", r)
+			}
 		}
 	}()
 	c := dial(x)
 	args := x.Args()
-	if len(args) != 1 {
+	if args.Len() != 1 {
 		println("ls needs a glob argument")
 		os.Exit(1)
 	}
-	w, ellipses := parseGlob(args[0])
+	w, ellipses := parseGlob(args.First())
 	list(0, "/", c.Walk(w), ellipses, x.Bool("long"), x.Bool("depth"))
 	return
 }
 
+// TODO fix to use Named interface to determine name of anchor element
 func list(level int, prefix string, anchor client.Anchor, recurse, long, depth bool) {
 	if anchor == nil {
 		return

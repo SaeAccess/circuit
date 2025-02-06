@@ -19,17 +19,17 @@ func init() {
 
 // Run parameterizes a container execution.
 type Run struct {
-	Image string
-	Memory int64
+	Image     string
+	Memory    int64
 	CpuShares int64
-	Lxc []string
-	Volume []string
-	Dir string
-	Entry string
-	Env []string
-	Path string
-	Args []string
-	Scrub bool
+	Lxc       []string
+	Volume    []string
+	Dir       string
+	Entry     string
+	Env       []string
+	Path      string
+	Args      []string
+	Scrub     bool
 }
 
 func ParseRun(src string) (*Run, error) {
@@ -50,27 +50,27 @@ func (x *Run) Arg(name string) []string {
 		r = append(r, "-m", fmt.Sprintf("%d", x.Memory))
 	}
 	for _, l := range x.Lxc {
-		r = append(r, "--lxc-conf", fmt.Sprintf("%s", l))
+		r = append(r, "--lxc-conf", l)
 	}
 	for _, v := range x.Volume {
-		r = append(r, "--volume", fmt.Sprintf("%s", v))
+		r = append(r, "--volume", v)
 	}
 	for _, e := range x.Env {
-		r = append(r, "--env", fmt.Sprintf("%s", e))
+		r = append(r, "--env", e)
 	}
 	if x.Dir != "" {
-		r = append(r, "--workdir", fmt.Sprintf("%s", x.Dir))
+		r = append(r, "--workdir", x.Dir)
 	}
 	if x.Entry != "" {
-		r = append(r, "--entrypoint", fmt.Sprintf("%s", x.Entry))
+		r = append(r, "--entrypoint", x.Entry)
 	}
 	r = append(r, x.Image) // image
 	if x.Path != "" {
 		r = append(r, x.Path) // command path
 	}
-	for _, a := range x.Args {
-		r = append(r, a)
-	}
+
+	r = append(r, x.Args...)
+
 	return r
 }
 

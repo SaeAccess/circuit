@@ -18,6 +18,10 @@ import (
 type ServerStat struct {
 	Addr   string
 	Joined time.Time
+
+	// TODO - put some runtime metrics for the server here and also add a  map for adding metadata
+	// for the server.  This can be used for scheduling elements and runtime behavior reporting.
+
 }
 
 func srvStat(s srv.Stat) ServerStat {

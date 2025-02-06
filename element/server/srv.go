@@ -48,6 +48,10 @@ func New(kin *tissue.Kin) Server {
 type Stat struct {
 	Addr   string
 	Joined time.Time
+
+	// TODO - put some runtime metrics for the server here and also add a  map for adding metadata
+	// for the server.  This can be used for scheduling elements and runtime behavior reporting.
+	// ex. HostInfo from podman
 }
 
 func (s *server) Rejoin(addr string) error {

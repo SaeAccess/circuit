@@ -3,7 +3,8 @@ nix:
 		cmd/circuit/chan.go cmd/circuit/dns.go cmd/circuit/joinleave.go \
 		cmd/circuit/ls.go cmd/circuit/wait.go cmd/circuit/util.go \
 		cmd/circuit/start.go cmd/circuit/procdkr.go cmd/circuit/peek.go \
-		cmd/circuit/load.go cmd/circuit/std.go cmd/circuit/recv.go
+		cmd/circuit/load.go cmd/circuit/std.go cmd/circuit/recv.go \
+		cmd/circuit/podman.go cmd/circuit/circuit.go
 
 clean:
 	rm $(GOPATH)/bin/circuit

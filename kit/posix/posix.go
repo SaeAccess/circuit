@@ -9,7 +9,7 @@
 package posix
 
 import (
-	"io/ioutil"
+	"io"
 	"os/exec"
 )
 
@@ -46,8 +46,10 @@ func Exec(prog, dir string, stdin string, argv ...string) (stdout, stderr string
 	if err != nil {
 		return "", "", err
 	}
-	stdoutBuf, _ := ioutil.ReadAll(stdoutReader)
-	stderrBuf, _ := ioutil.ReadAll(stderrReader)
+	//stdoutBuf, _ := ioutil.ReadAll(stdoutReader)
+	stdoutBuf, _ := io.ReadAll(stdoutReader)
+	//stderrBuf, _ := ioutil.ReadAll(stderrReader)
+	stderrBuf, _ := io.ReadAll(stderrReader)
 
 	return string(stdoutBuf), string(stderrBuf), cmd.Wait()
 }

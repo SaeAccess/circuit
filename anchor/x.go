@@ -8,14 +8,8 @@
 package anchor
 
 import (
-	"errors"
+	"fmt"
 
-	"github.com/gocircuit/circuit/element/dns"
-	"github.com/gocircuit/circuit/element/docker"
-	"github.com/gocircuit/circuit/element/proc"
-	srv "github.com/gocircuit/circuit/element/server"
-	"github.com/gocircuit/circuit/element/valve"
-	"github.com/gocircuit/circuit/kit/pubsub"
 	"github.com/gocircuit/circuit/use/circuit"
 	xerrors "github.com/gocircuit/circuit/use/errors"
 )
@@ -24,6 +18,8 @@ func init() {
 	circuit.RegisterValue(XTerminal{})
 }
 
+// XTerminal represents the server side stub that receives the remote call from
+// YTerminal
 type XTerminal struct {
 	t *Terminal
 }
@@ -68,9 +64,13 @@ func (x XTerminal) Scrub() {
 	x.t.Scrub()
 }
 
-// YTerminal…
+// YTerminal represents client side stub used for making remote calls.
 type YTerminal struct {
 	X circuit.X
+}
+
+func (y YTerminal) Path() string {
+	return y.X.Call("Path")[0].(string)
 }
 
 func (y YTerminal) Walk(walk []string) YTerminal {
@@ -93,49 +93,37 @@ func (y YTerminal) Make(kind string, arg interface{}) (yelm interface{}, err err
 	if err = xerrors.Unpack(r[1]); err != nil {
 		return nil, err
 	}
-	switch kind {
-	case Chan:
-		return valve.YValve{X: r[0].(circuit.X)}, nil
-	case Proc:
-		return proc.YProc{X: r[0].(circuit.X)}, nil
-	case Docker:
-		return docker.YContainer{X: r[0].(circuit.X)}, nil
-	case Nameserver:
-		return dns.YNameserver{X: r[0].(circuit.X)}, nil
-	case OnJoin:
-		return pubsub.YSubscription{X: r[0].(circuit.X)}, nil
-	case OnLeave:
-		return pubsub.YSubscription{X: r[0].(circuit.X)}, nil
+
+	x, ok := r[0].(circuit.X)
+	if !ok {
+		return nil, fmt.Errorf("element not created, kind=%s, got %v", kind, r[0])
 	}
-	return nil, errors.New("element kind not supported")
+
+	factory, ok := efRepo.GetYF(kind)
+	if !ok {
+		return nil, fmt.Errorf("element kind=%s not known", kind)
+	}
+
+	return factory(x)
 }
 
 func (y YTerminal) Get() (kind string, yelm interface{}) {
 	r := y.X.Call("Get")
 	kind = r[0].(string)
-	switch kind {
-	case Server:
-		return Server, srv.YServer{X: r[1].(circuit.X)}
-	case Chan:
-		return Chan, valve.YValve{X: r[1].(circuit.X)}
-	case Proc:
-		return Proc, proc.YProc{X: r[1].(circuit.X)}
-	case Nameserver:
-		return Nameserver, dns.YNameserver{X: r[1].(circuit.X)}
-	case Docker:
-		return Docker, docker.YContainer{X: r[1].(circuit.X)}
-	case OnJoin:
-		return OnJoin, pubsub.YSubscription{X: r[1].(circuit.X)}
-	case OnLeave:
-		return OnLeave, pubsub.YSubscription{X: r[1].(circuit.X)}
+	x, ok := r[1].(circuit.X)
+	if !ok {
+		return "", nil
 	}
-	return "", nil
+
+	factory, ok := efRepo.GetYF(kind)
+	if !ok {
+		return "", fmt.Errorf("element kind=%s not known", kind)
+	}
+
+	v, _ := factory(x)
+	return kind, v
 }
 
 func (y YTerminal) Scrub() {
 	y.X.Call("Scrub")
-}
-
-func (y YTerminal) Path() string {
-	return y.X.Call("Path")[0].(string)
 }

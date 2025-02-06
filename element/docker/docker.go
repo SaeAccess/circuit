@@ -13,32 +13,38 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/gocircuit/circuit/anchor"
+	ds "github.com/gocircuit/circuit/client/docker"
 	"github.com/gocircuit/circuit/element/proc"
 	"github.com/gocircuit/circuit/kit/interruptible"
 	"github.com/gocircuit/circuit/kit/lang"
 	"github.com/gocircuit/circuit/use/circuit"
-	ds "github.com/gocircuit/circuit/client/docker"
 )
 
 type Container interface {
-	Scrub()
-	IsDone() bool
-	Peek() (*ds.Stat, error)
-	Signal(sig string) error
-	Wait() (*ds.Stat, error)
-	Stdin() io.WriteCloser
-	Stdout() io.ReadCloser
-	Stderr() io.ReadCloser
+	ds.Container
+	// Scrub()
+	// IsDone() bool
+	// Peek() (*ds.Stat, error)
+	// Signal(sig string) error
+	// Wait() (*ds.Stat, error)
+	// Stdin() io.WriteCloser
+	// Stdout() io.ReadCloser
+	// Stderr() io.ReadCloser
 	X() circuit.X
 }
 
 type container struct {
-	name string
-	cmd *exec.Cmd
+	name   string
+	cmd    *exec.Cmd
 	stdin  io.WriteCloser
 	stdout io.ReadCloser
 	stderr io.ReadCloser
-	exit <-chan error
+	exit   <-chan error
+}
+
+func init() {
+	anchor.RegisterElement("docker", ef, yf)
 }
 
 func MakeContainer(run ds.Run) (_ Container, err error) {
@@ -47,7 +53,7 @@ func MakeContainer(run ds.Run) (_ Container, err error) {
 	}
 	ch := make(chan error, 1)
 	con := &container{
-		name: "via-circuit-"+lang.ChooseReceiverID().String()[1:],
+		name: "via-circuit-" + lang.ChooseReceiverID().String()[1:],
 		exit: ch,
 	}
 	con.cmd = exec.Command(dkr, run.Arg(con.name)...)
@@ -125,4 +131,30 @@ func (con *container) IsDone() bool {
 
 func (con *container) X() circuit.X {
 	return circuit.Ref(XContainer{con})
+}
+
+// ef is the element factory for creating the docker element
+func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
+	run, ok := arg.(ds.Run)
+	if !ok {
+		return nil, errors.New("invalid argument")
+	}
+	x, err := MakeContainer(run)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		defer func() {
+			recover()
+		}()
+		if run.Scrub {
+			defer t.Scrub()
+		}
+		x.Wait()
+	}()
+	return x, nil
+}
+
+func yf(x circuit.X) (any, error) {
+	return YContainer{x}, nil
 }
