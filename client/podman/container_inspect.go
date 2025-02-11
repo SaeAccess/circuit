@@ -94,7 +94,8 @@ type InspectContainerConfig struct {
 	// Container working directory
 	WorkingDir string `json:"WorkingDir"`
 	// Container entrypoint
-	Entrypoint []string `json:"Entrypoint"`
+	//Entrypoint []string `json:"Entrypoint"`
+	Entrypoint string `json:"Entrypoint"`
 	// On-build arguments - presently unused. More of Buildah's domain.
 	OnBuild *string `json:"OnBuild"`
 	// Container labels
@@ -102,7 +103,7 @@ type InspectContainerConfig struct {
 	// Container annotations
 	Annotations map[string]string `json:"Annotations"`
 	// Container stop signal
-	StopSignal string `json:"StopSignal"`
+	StopSignal int `json:"StopSignal"`
 	// Configured startup healthcheck for the container
 	StartupHealthCheck *StartupHealthCheck `json:"StartupHealthCheck,omitempty"`
 	// Configured healthcheck for the container

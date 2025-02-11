@@ -15,6 +15,7 @@ type Container interface {
 	Scrub()
 	IsDone() bool
 	Peek() (*Stat, error)
+	PeekBytes() []byte
 	Signal(sig string) error
 	Wait() (*Stat, error)
 	Stdin() io.WriteCloser

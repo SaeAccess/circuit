@@ -11,13 +11,15 @@ type Pod interface {
 	// Inspect the configuration of the pod
 	Inspect() (*InspectPodData, error)
 
-	IsDone() bool
+	//	IsDone() bool
 
 	// List the containers in the pod
 	//	List() []Container
 
 	// Pause the pod
 	Pause() error
+
+	PeekBytes() []byte
 
 	// Restart restarts all containers in the pod.
 	Restart() error
@@ -172,6 +174,8 @@ type PodCreateOptions struct {
 	NoHosts      bool     `json:"no_manage_hosts,omitempty"`
 	PublishPorts []string `json:"published_ports,omitempty"`
 	Networks     []string `json:"network,omitempty"`
+
+	Scrub bool `json:"scrub,omitempty"`
 }
 
 func (c *PodCreateOptions) CmdLine() []string {

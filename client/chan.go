@@ -9,8 +9,6 @@ package client
 
 import (
 	"io"
-
-	"github.com/gocircuit/circuit/element/valve"
 )
 
 // Chan provides access to a circuit channel element.
@@ -19,7 +17,7 @@ import (
 // that the "messages" passed through the channel are pipes that connect the sender
 // and the receiver and allow them, once connected, to exchange an arbitrary stream of
 // byte data which as a whole counts as one channel message.
-// 
+//
 // All methods panic if the server hosting the channel dies.
 type Chan interface {
 
@@ -66,22 +64,4 @@ type ChanStat struct {
 
 	// NumRecv is the number of completed invocations to Recv.
 	NumRecv int
-}
-
-func retypeChanStat(s valve.Stat) ChanStat {
-	return ChanStat{
-		Cap: s.Cap,
-		Closed: s.Closed,
-		Aborted: s.Aborted,
-		NumSend: s.NumSend,
-		NumRecv: s.NumRecv,
-	}
-}
-
-type yvalveChan struct {
-	valve.YValve
-}
-
-func (y yvalveChan) Stat() ChanStat {
-	return retypeChanStat(y.YValve.Stat())
 }

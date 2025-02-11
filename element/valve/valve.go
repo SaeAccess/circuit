@@ -25,6 +25,7 @@ type Valve interface {
 	Recv() (io.ReadCloser, error)
 	Cap() int
 	Stat() Stat
+	PeekBytes() []byte
 	X() circuit.X
 }
 
@@ -121,6 +122,11 @@ func (v *valve) Stat() Stat {
 	v.ctrl.Lock()
 	defer v.ctrl.Unlock()
 	return v.ctrl.stat
+}
+
+func (v *valve) PeekBytes() []byte {
+	b, _ := json.MarshalIndent(v.Stat(), "", "\t")
+	return b
 }
 
 type scrubValve struct {

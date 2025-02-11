@@ -1,9 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"github.com/gocircuit/circuit/anchor"
+	"github.com/gocircuit/circuit/client/makers"
 	container "github.com/gocircuit/circuit/client/podman"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -151,6 +152,18 @@ func init() {
 					},
 				},
 				{
+					Name:      "start",
+					Usage:     "start the container element hosted at anchor",
+					Args:      true,
+					ArgsUsage: "anchor",
+					Action:    start,
+					Flags: []cli.Flag{
+						&cli.StringFlag{Name: "dial", Aliases: []string{"d"}, Value: "", Usage: "circuit member to dial into"},
+						&cli.StringFlag{Name: "discover", Value: "228.8.8.8:8822", Usage: "Multicast address for peer server discovery", EnvVars: []string{"CIRCUIT_DISCOVER"}},
+						&cli.StringFlag{Name: "hmac", Value: "", Usage: "File containing HMAC credentials. Use RC4 encryption.", EnvVars: []string{"CIRCUIT_HMAC"}},
+					},
+				},
+				{
 					Name:      "stop",
 					Usage:     "stops the running container element hosted at anchor",
 					Args:      true,
@@ -242,28 +255,12 @@ func makeContainer(x *cli.Context) (con container.Container, err error) {
 		opts.Scrub = true
 	}
 
-	if con, err = c.Walk(w).MakeContainer(opts); err != nil {
+	_, err = c.Walk(w).Make(makers.ContainerType, opts)
+	if err != nil {
 		return nil, errors.Wrapf(err, "makeContainer error: %s", err)
 	}
 
 	return
-}
-
-// getContainer uses the first argument as anchor to get the container
-func getContainer(x *cli.Context) (container.Container, error) {
-	// connect
-	c := dial(x)
-	args := x.Args()
-	if args.Len() != 1 {
-		return nil, errors.New("checkpoint requires an anchor argument")
-	}
-	w, _ := parseGlob(args.Get(1))
-	con, ok := c.Walk(w).Get().(container.Container)
-	if !ok {
-		return nil, errors.New("anchor is not a podman container")
-	}
-
-	return con, nil
 }
 
 func checkPoint(x *cli.Context) (err error) {
@@ -275,7 +272,7 @@ func checkPoint(x *cli.Context) (err error) {
 
 	// get the container anchor
 	var con container.Container
-	if con, err = getContainer(x); err != nil {
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
 		return
 	}
 
@@ -301,7 +298,7 @@ func exec(x *cli.Context) (err error) {
 
 	// get the container anchor
 	var con container.Container
-	if con, err = getContainer(x); err != nil {
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
 		return
 	}
 
@@ -322,47 +319,12 @@ func exec(x *cli.Context) (err error) {
 
 // Inspect the configuration of the container
 func inspect(x *cli.Context) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = wrapError(r)
-		}
-	}()
-
-	// get the container anchor
-	var con container.Container
-	if con, err = getContainer(x); err != nil {
-		return
-	}
-
-	var data *container.InspectContainerData
-	if data, err = con.Inspect(); err != nil {
-		return errors.Wrapf(err, "podman container inspect error: %v", err)
-	}
-
-	buf, _ := json.MarshalIndent(data, "", "\t")
-	fmt.Println(string(buf))
-	return
+	return inspectAnchorType[container.Container](x, anchor.Container)
 }
 
 // Pause the processes in the container
 func pause(x *cli.Context) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = wrapError(r)
-		}
-	}()
-
-	// get the container anchor
-	var con container.Container
-	if con, err = getContainer(x); err != nil {
-		return
-	}
-
-	if err = con.Pause(); err != nil {
-		return errors.Wrapf(err, "podman container inspect error: %v", err)
-	}
-
-	return
+	return pauseAnchorType[container.Container](x, anchor.Container)
 }
 
 // Stats()
@@ -383,7 +345,7 @@ func ports(x *cli.Context) (err error) {
 
 	// get the container anchor
 	var con container.Container
-	if con, err = getContainer(x); err != nil {
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
 		return
 	}
 
@@ -402,7 +364,7 @@ func restore(x *cli.Context) (err error) {
 
 	// get the container anchor
 	var con container.Container
-	if con, err = getContainer(x); err != nil {
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
 		return
 	}
 
@@ -429,6 +391,27 @@ func runLabel(x *cli.Context) error {
 // func scrub(x *cli.Context) error {
 // }
 
+func start(x *cli.Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	// get the container anchor
+	var con container.Container
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
+		return
+	}
+
+	if err = con.Start(); err != nil {
+		return errors.Wrapf(err, "podman container start error")
+	}
+
+	return
+
+}
+
 // Stop the container
 func stop(x *cli.Context) (err error) {
 	defer func() {
@@ -439,7 +422,7 @@ func stop(x *cli.Context) (err error) {
 
 	// get the container anchor
 	var con container.Container
-	if con, err = getContainer(x); err != nil {
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
 		return
 	}
 
@@ -465,7 +448,7 @@ func unpause(x *cli.Context) (err error) {
 
 	// get the container anchor
 	var con container.Container
-	if con, err = getContainer(x); err != nil {
+	if con, err = getAnchorType[container.Container](x, anchor.Container); err != nil {
 		return
 	}
 

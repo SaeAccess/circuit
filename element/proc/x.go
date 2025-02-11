@@ -9,7 +9,7 @@ package proc
 
 import (
 	"io"
-	
+
 	xio "github.com/gocircuit/circuit/kit/x/io"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/gocircuit/circuit/use/errors"
@@ -58,6 +58,10 @@ func (x XProc) Peek() Stat {
 	return pack(x.Proc.Peek())
 }
 
+func (x XProc) PeekBytes() []byte {
+	return x.Proc.PeekBytes()
+}
+
 type YProc struct {
 	X circuit.X
 }
@@ -90,6 +94,10 @@ func (y YProc) IsDone() bool {
 
 func (y YProc) Peek() Stat {
 	return unpack(y.X.Call("Peek")[0].(Stat))
+}
+
+func (y YProc) PeekBytes() []byte {
+	return y.X.Call("PeekBytes")[0].([]byte)
 }
 
 func (y YProc) Stdin() io.WriteCloser {

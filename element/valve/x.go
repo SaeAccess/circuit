@@ -59,6 +59,10 @@ func (x XValve) Stat() Stat {
 	return x.Valve.Stat()
 }
 
+func (x XValve) PeekBytes() []byte {
+	return x.Valve.PeekBytes()
+}
+
 type YValve struct {
 	X circuit.X
 }
@@ -91,6 +95,10 @@ func (y YValve) Cap() int {
 
 func (y YValve) Stat() Stat {
 	return y.X.Call("Stat")[0].(Stat)
+}
+
+func (y YValve) PeekBytes() []byte {
+	return y.X.Call("PeekBytes")[0].([]byte)
 }
 
 func (y YValve) Scrub() {

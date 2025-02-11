@@ -4,15 +4,17 @@ type Volume interface {
 	// Exists
 	Exists() error
 
-	Export() error
+	Export(opts VolumeExportOptions) error
 
-	Import() error
+	Import(source string) error
 
 	// Inspect the volume
 	Inspect() (*InspectVolumeData, error)
 
 	// Mount the volume
 	Mount() error
+
+	PeekBytes() []byte
 
 	// Reload the volume from volume plugins
 	Reload() error
@@ -29,10 +31,20 @@ type VolumeCreateOptions struct {
 	Ignore  bool     `json:"ignore,omitempty"`
 	Label   []string `json:"label,omitempty"`
 	Options []string `json:"options,omitempty"`
+	Name    string   `json:"name,omitempty"`
+
+	Scrub bool `json:"scrub,omitempty"`
 }
 
-func (c *VolumeCreateOptions) CmdLine(name string) []string {
+func (c *VolumeCreateOptions) CmdLine() []string {
 	var args = []string{"volume", "create"}
+
+	args = appendS(args, "--driver", c.Driver)
+	args = appendB(args, "--ignore", c.Ignore)
+	args = appendSA(args, "--label", c.Label)
+	args = appendSA(args, "--opt", c.Options)
+
+	args = append(args, c.Name)
 
 	return args
 }
@@ -43,6 +55,9 @@ type VolumeExportOptions struct {
 
 func (c *VolumeExportOptions) CmdLine(name string) []string {
 	var args = []string{"volume", "export"}
+
+	args = appendS(args, "--output", c.Output)
+	args = append(args, name)
 
 	return args
 }

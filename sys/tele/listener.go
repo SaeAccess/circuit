@@ -99,7 +99,7 @@ func (l *Listener) handshake(conn *blend.Conn) (sourceAddr *Addr, err error) {
 		return nil, errors.NewError("rejecting unknown target address type")
 	}
 	if la.WorkerID() != l.addr.WorkerID() {
-		log.Println("rejecting", conn.RemoteAddr().String(), "due to worker identity mismatch")
+		log.Println("rejecting", conn.RemoteAddr().String(), "due to worker identity mismatch", "target addr=", la.WorkerID(), "listetener addr=", l.addr.WorkerID())
 		return nil, errors.NewError("rejecting worker identity mismatch, looks for %s, got %s", la.WorkerID(), l.addr.WorkerID())
 	}
 	if la.PID != os.Getpid() {

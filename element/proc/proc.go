@@ -8,6 +8,7 @@
 package proc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +31,7 @@ type Proc interface {
 	GetCmd() Cmd
 	IsDone() bool
 	Peek() Stat
+	PeekBytes() []byte
 	Stdin() io.WriteCloser
 	Stdout() io.ReadCloser
 	Stderr() io.ReadCloser
@@ -59,7 +61,7 @@ func init() {
 			if !ok {
 				return nil, errors.New("invalid argument")
 			}
-			elem := MakeProc(cmd)
+			elem := makeProc(cmd)
 
 			go func() {
 				defer func() {
@@ -80,7 +82,7 @@ func init() {
 
 }
 
-func MakeProc(cmd Cmd) Proc {
+func makeProc(cmd Cmd) Proc {
 	p := &proc{}
 	// std*
 	p.cmd.cmd.Stdin, p.stdin = interruptible.BufferPipe(32e3)
@@ -197,6 +199,11 @@ func (p *proc) Peek() Stat {
 	p.cmd.Lock()
 	defer p.cmd.Unlock()
 	return p.peek()
+}
+
+func (p *proc) PeekBytes() []byte {
+	b, _ := json.MarshalIndent(p.Peek(), "", "\t")
+	return b
 }
 
 func (p *proc) peek() Stat {

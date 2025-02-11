@@ -15,6 +15,7 @@ import (
 
 	"github.com/gocircuit/circuit/client"
 	"github.com/gocircuit/circuit/client/docker"
+	"github.com/gocircuit/circuit/client/makers"
 	"github.com/gocircuit/circuit/element/podman/container"
 	"github.com/pkg/errors"
 
@@ -104,14 +105,18 @@ func mkproc(x *cli.Context) (err error) {
 	if x.Bool("scrub") {
 		cmd.Scrub = true
 	}
-	p, err := c.Walk(w).MakeProc(cmd)
+	p, err := c.Walk(w).Make(makers.ProcType, cmd)
 	if err != nil {
 		return errors.Wrapf(err, "mkproc error: %s", err)
 	}
-	ps := p.Peek()
-	if ps.Exit != nil {
-		return errors.Errorf("%v", ps.Exit)
+
+	if proc, ok := p.(client.Proc); ok {
+		ps := proc.Peek()
+		if ps.Exit != nil {
+			return errors.Errorf("%v", ps.Exit)
+		}
 	}
+
 	return
 }
 
@@ -138,7 +143,7 @@ func mkdkr(x *cli.Context) (err error) {
 	}
 
 	// get client side anchor to create the docker container
-	if _, err = c.Walk(w).MakeDocker(run); err != nil {
+	if _, err = c.Walk(w).Make(makers.DockerType, run); err != nil {
 		return errors.Wrapf(err, "mkdkr error: %s", err)
 	}
 	return

@@ -1,6 +1,7 @@
 package container
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,8 +12,8 @@ import (
 	"github.com/gocircuit/circuit/anchor"
 	c "github.com/gocircuit/circuit/client/podman"
 	"github.com/gocircuit/circuit/element"
+	"github.com/gocircuit/circuit/element/podman"
 	"github.com/gocircuit/circuit/kit/interruptible"
-	"github.com/gocircuit/circuit/kit/lang"
 	"github.com/gocircuit/circuit/use/circuit"
 )
 
@@ -35,48 +36,39 @@ func init() {
 	anchor.RegisterElement(anchor.Container, ef, yf)
 }
 
-// makeName returns name as specified or creates a unique name if name is empty
-func makeName(name string) string {
-	if name == "" {
-		name = "via-circuit-" + lang.ChooseReceiverID().String()[1:]
-	}
-
-	return name
-}
-
 // MakeContainer creates a new container element
-func MakeContainer(opts *c.ContainerCreateOptions) (Container, error) {
+func makeContainer(opts *c.ContainerCreateOptions) (Container, error) {
 	// Check if podman enabled on this server
 	// TODO make this a capability of the server when it joins the cluster.
-	if podman == "" {
+	if podman.Path == "" {
 		return nil, errors.New("podman not installed on this server")
 	}
 
 	// determine name
-	opts.Name = makeName(opts.Name)
+	opts.Name = element.ElementName(opts.Name)
+
+	// Create a new exec.Cmd
+	args := opts.CmdLine(opts.Name)
+	log.Printf("cmd line: %s %v", podman.Path, args)
+	cmd := exec.Command(podman.Path, args...)
+	r, err := cmd.Output()
+	if err != nil {
+		log.Printf("error running command: %s %v - error:%v", podman.Path, args, err)
+		return nil, err
+	}
 
 	// Create a new container
 	con := &container{
 		name: opts.Name,
+		id:   string(r),
 		exit: make(chan error, 1),
+		cmd:  cmd,
 	}
-
-	// Create a new exec.Cmd
-	args := opts.CmdLine(con.name)
-	log.Printf("cmd line: %s %v", podman, args)
-	con.cmd = exec.Command(podman, args...)
-	r, err := con.cmd.Output()
-	if err != nil {
-		log.Printf("error running command: %s %v - error:%v", podman, args, err)
-		return nil, err
-	}
-
-	con.id = string(r)
 
 	// GC...
 	runtime.SetFinalizer(con,
 		func(c *container) {
-			exec.Command(podman, "rm", c.name).Run()
+			exec.Command(podman.Path, "rm", c.name).Run()
 		},
 	)
 
@@ -86,18 +78,18 @@ func MakeContainer(opts *c.ContainerCreateOptions) (Container, error) {
 // NOTE: this requires root to run and also that criu is installed on the host.
 // TODO check user and if criu is installed from host config
 func (con *container) CheckPoint(opts *c.ContainerCheckpointOptions) error {
-	return exec.Command(podman, opts.CmdLine(con.name)...).Run()
+	return exec.Command(podman.Path, opts.CmdLine(con.name)...).Run()
 }
 
 // Exec runs a command in a running container.
 func (con *container) Exec(opts *c.ContainerExecOptions) ([]byte, error) {
-	return exec.Command(podman, opts.CmdLine(con.name)...).Output()
+	return exec.Command(podman.Path, opts.CmdLine(con.name)...).Output()
 }
 
 func (con *container) Inspect() (*c.InspectContainerData, error) {
 	args := append([]string{}, "container", "inspect", con.name)
 
-	b, err := exec.Command(podman, args...).Output()
+	b, err := exec.Command(podman.Path, args...).Output()
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +112,7 @@ func (con *container) IsDone() bool {
 }
 
 func (con *container) Pause() error {
-	if err := exec.Command(podman, "container", "pause", con.name).Run(); err != nil {
+	if err := exec.Command(podman.Path, "container", "pause", con.name).Run(); err != nil {
 		return err
 	}
 
@@ -131,8 +123,18 @@ func (con *container) Peek() (*c.InspectContainerData, error) {
 	return con.Inspect()
 }
 
+func (con *container) PeekBytes() []byte {
+	v, err := con.Inspect()
+	if err != nil {
+		return []byte{}
+	}
+
+	b, _ := json.MarshalIndent(v, "", "\t")
+	return b
+}
+
 func (con *container) Ports() []string {
-	b, err := exec.Command(podman, "container", "port", con.name).Output()
+	b, err := exec.Command(podman.Path, "container", "port", con.name).Output()
 	if err != nil {
 		return []string{}
 	}
@@ -149,7 +151,7 @@ func (con *container) Ports() []string {
 }
 
 func (con *container) Restore(opts *c.ContainerRestoreOptions) error {
-	return exec.Command(podman, opts.CmdLine(con.name)...).Run()
+	return exec.Command(podman.Path, opts.CmdLine(con.name)...).Run()
 }
 
 func (con *container) RunLabel() error {
@@ -158,10 +160,17 @@ func (con *container) RunLabel() error {
 
 func (con *container) Scrub() {
 	// TODO stop, then remove
-	exec.Command(podman, "container", "rm", con.name).Run()
+	opts := c.ContainerRemoveOptions{
+		Depend: true, // remove any dependent container
+		Force:  true,
+		Ignore: true,
+		Volume: true,
+	}
+	exec.Command(podman.Path, opts.CmdLine(con.name)...).Run()
 }
 
 func (con *container) Signal(sig string) error {
+	// signal can be integer string or string name
 	return nil
 }
 
@@ -170,7 +179,7 @@ func (con *container) Start() error {
 		return errors.New("container not created")
 	}
 
-	con.cmd = exec.Command(podman, "start", con.name)
+	con.cmd = exec.Command(podman.Path, "start", con.name)
 
 	con.cmd.Stdin, con.stdin = interruptible.BufferPipe(element.StdBufferLen)
 	con.stdout, con.cmd.Stdout = interruptible.BufferPipe(element.StdBufferLen)
@@ -202,7 +211,7 @@ func (con *container) Stdout() io.ReadCloser {
 }
 
 func (con *container) Stop(opts *c.ContainerStopOpts) error {
-	if err := exec.Command(podman, opts.CmdLine(con.name)...).Run(); err != nil {
+	if err := exec.Command(podman.Path, opts.CmdLine(con.name)...).Run(); err != nil {
 		return err
 	}
 
@@ -210,7 +219,7 @@ func (con *container) Stop(opts *c.ContainerStopOpts) error {
 }
 
 func (con *container) Unpause() error {
-	if err := exec.Command(podman, "container", "unpause", con.name).Run(); err != nil {
+	if err := exec.Command(podman.Path, "container", "unpause", con.name).Run(); err != nil {
 		return err
 	}
 
@@ -232,7 +241,7 @@ func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid argument, arg=%T", arg)
 	}
-	x, err := MakeContainer(&opts)
+	x, err := makeContainer(&opts)
 	if err != nil {
 		return nil, err
 	}
@@ -251,17 +260,4 @@ func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
 // yf is the element factory for the container element
 func yf(x circuit.X) (any, error) {
 	return YContainer{x}, nil
-}
-
-var podman string
-
-func ResolvePodman() (string, error) {
-	exe, err := element.ResolveExe("podman", "version")
-	if err != nil {
-		log.Printf("podman not found, error=%v", err)
-		return "", err
-	}
-
-	podman = exe
-	return podman, nil
 }

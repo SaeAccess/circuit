@@ -13,12 +13,10 @@ package client
 import (
 	"errors"
 	"net"
+	"reflect"
 	"sync"
 
 	"github.com/gocircuit/circuit/anchor"
-	"github.com/gocircuit/circuit/client/docker"
-	"github.com/gocircuit/circuit/client/podman"
-	cwasm "github.com/gocircuit/circuit/client/wasm"
 	"github.com/gocircuit/circuit/kit/assemble"
 	_ "github.com/gocircuit/circuit/kit/debug/kill"
 	"github.com/gocircuit/circuit/sys/lang"
@@ -128,54 +126,62 @@ func (c *Client) ServerID() string {
 	return c.y.Self().Key()
 }
 
-// MakeChan is an Anchor interface method, not applicable to the root-level anchor.
-func (c *Client) MakeChan(n int) (Chan, error) {
-	return nil, errors.New("cannot create elements outside of servers")
+func (c *Client) Make(typ reflect.Type, arg any) (any, error) {
+	panic(errors.New("cannot create elements outside of servers"))
 }
+
+// MakeChan is an Anchor interface method, not applicable to the root-level anchor.
+// func (c *Client) MakeChan(n int) (Chan, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // MakeProc is an Anchor interface method, not applicable to the root-level anchor.
-func (c *Client) MakeProc(cmd Cmd) (Proc, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (c *Client) MakeProc(cmd Cmd) (Proc, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // MakeDocker is an Anchor interface method, not applicable to the root-level anchor.
-func (c *Client) MakeDocker(run docker.Run) (docker.Container, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (c *Client) MakeDocker(run docker.Run) (docker.Container, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // MakeNameserver…
-func (c *Client) MakeNameserver(string) (Nameserver, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (c *Client) MakeNameserver(string) (Nameserver, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // MakeOnJoin is an Anchor interface method, not applicable to the root-level anchor.
-func (c *Client) MakeOnJoin() (Subscription, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (c *Client) MakeOnJoin() (Subscription, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // MakeOnLeave is an Anchor interface method, not applicable to the root-level anchor.
-func (c *Client) MakeOnLeave() (Subscription, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (c *Client) MakeOnLeave() (Subscription, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
-func (t *Client) MakeWasm() (cwasm.Wasm, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (t *Client) MakeWasm() (cwasm.Wasm, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
-func (t *Client) MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (t *Client) MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
-func (t *Client) MakeNetwork() (podman.Network, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (t *Client) MakeNetwork() (podman.Network, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // MakeVolume…
-func (t *Client) MakeVolume() (podman.Volume, error) {
-	return nil, errors.New("cannot create elements outside of servers")
-}
+// func (t *Client) MakeVolume() (podman.Volume, error) {
+// 	return nil, errors.New("cannot create elements outside of servers")
+// }
 
 // Get is an Anchor interface method, not applicable to the root-level anchor.
+//
+//	func (c *Client) Get() interface{} {
+//		return nil
+//	}
 func (c *Client) Get() interface{} {
 	return nil
 }

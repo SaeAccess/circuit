@@ -11,20 +11,10 @@ import (
 	// "fmt"
 
 	"fmt"
+	"reflect"
 
 	"github.com/gocircuit/circuit/anchor"
-	"github.com/gocircuit/circuit/element/dns"
-	"github.com/gocircuit/circuit/element/proc"
-	srv "github.com/gocircuit/circuit/element/server"
-	"github.com/gocircuit/circuit/element/valve"
-	"github.com/gocircuit/circuit/kit/pubsub"
 	"github.com/gocircuit/circuit/tissue"
-
-	cdocker "github.com/gocircuit/circuit/client/docker"
-	"github.com/gocircuit/circuit/client/podman"
-	cwasm "github.com/gocircuit/circuit/client/wasm"
-	edocker "github.com/gocircuit/circuit/element/docker"
-	pm "github.com/gocircuit/circuit/element/podman/container"
 )
 
 // An Anchor represents a location in the global anchor namespace of a circuit
@@ -60,50 +50,13 @@ type Anchor interface {
 	// View returns the set of this anchor's sub-anchors.
 	View() map[string]Anchor
 
-	// MakeChan creates a new circuit channel element at this anchor with a given capacity n.
-	// If the anchor already stores an element, a non-nil error is returned.
-	// Panics indicate that the server hosting the anchor is gone.
-	MakeChan(n int) (Chan, error)
-
-	// MakeProc issues the execution of an OS process, described by cmd, at the server hosting the anchor
-	// and creates a corresponding circuit process element at this anchor.
-	// If the anchor already stores an element, a non-nil error is returned.
-	// Panics indicate that the server hosting the anchor is gone.
-	MakeProc(cmd Cmd) (Proc, error)
-
-	// MakeDocker…
-	MakeDocker(run cdocker.Run) (cdocker.Container, error)
-
-	// MakeNameserver…
-	MakeNameserver(addr string) (Nameserver, error)
-
-	// MakeOnJoin…
-	MakeOnJoin() (Subscription, error)
-
-	// MakeOnLeave…
-	MakeOnLeave() (Subscription, error)
-
-	// TODO need to add WASM and Container elements
-
-	// MakeWasm…
-	MakeWasm() (cwasm.Wasm, error)
-
-	// MakeContaner  creates a podman container element
-	MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error)
-
-	// RunContainer...
-	//RunContainer(c *podman.ContainerRunOptions) (podman.Container, error)
-
-	// MakeNetwork…
-	MakeNetwork() (podman.Network, error)
-
-	// MakeVolume…
-	MakeVolume() (podman.Volume, error)
+	Make(typ reflect.Type, arg any) (any, error)
 
 	// Get returns a handle for the circuit element (Chan, Proc, Subscription, Server, etc)
 	// stored at this anchor, and nil otherwise.
 	// Panics indicate that the server hosting the anchor and its element has already died.
-	Get() interface{}
+	// Get() interface{}
+	Get() any
 
 	// Scrub aborts and abandons the circuit element stored at this anchor, if one is present.
 	// If the hosting server is dead, a panic will be issued.
@@ -111,11 +64,6 @@ type Anchor interface {
 
 	// Path returns the path to this anchor
 	Path() string
-}
-
-// Named interface provides a namme for elements
-type Named interface {
-	Name() string
 }
 
 // Split breaks up an anchor path into components.
@@ -166,106 +114,40 @@ func (t terminal) View() map[string]Anchor {
 	return w
 }
 
-func (t terminal) MakeChan(n int) (Chan, error) {
-	yvalve, err := t.y.Make(anchor.Chan, n)
+// Single Make method for anchor impl
+func (t terminal) Make(typ reflect.Type, arg any) (any, error) {
+	// Get the maker for the specified type
+	maker, ok := GetElementMaker(typ)
+	if !ok {
+		return nil, fmt.Errorf("no element maker for type=%v", typ)
+	}
+
+	el, err := maker.Make(t.y, arg)
 	if err != nil {
 		return nil, err
 	}
-	return yvalveChan{yvalve.(valve.YValve)}, nil
-}
 
-func (t terminal) MakeProc(cmd Cmd) (Proc, error) {
-	yproc, err := t.y.Make(anchor.Proc, cmd.retype())
-	if err != nil {
-		return nil, err
+	// Validate the type, maybe maker didnt
+	if reflect.TypeOf(el) != typ {
+		return nil, fmt.Errorf("mismatch element maker types, %s != %s", reflect.TypeOf(el).Name(), typ.Name())
 	}
-	return yprocProc{yproc.(proc.YProc)}, nil
+
+	return el, nil
 }
 
-func (t terminal) MakeNameserver(addr string) (Nameserver, error) {
-	ydns, err := t.y.Make(anchor.Nameserver, addr)
-	if err != nil {
-		return nil, err
-	}
-	return yNameserver{ydns.(dns.YNameserver)}, nil
-}
-
-func (t terminal) MakeDocker(run cdocker.Run) (cdocker.Container, error) {
-	ydkr, err := t.y.Make(anchor.Docker, run)
-	if err != nil {
-		return nil, err
-	}
-	return ydkr.(edocker.YContainer), nil
-}
-
-func (t terminal) MakeOnJoin() (Subscription, error) {
-	ysub, err := t.y.Make(anchor.OnJoin, "")
-	if err != nil {
-		return nil, err
-	}
-	return ysubSub{ysub.(pubsub.YSubscription)}, nil
-}
-
-func (t terminal) MakeOnLeave() (Subscription, error) {
-	ysub, err := t.y.Make(anchor.OnLeave, "")
-	if err != nil {
-		return nil, err
-	}
-	return ysubSub{ysub.(pubsub.YSubscription)}, nil
-}
-
-func (t terminal) MakeWasm() (cwasm.Wasm, error) {
-	ywasm, err := t.y.Make(anchor.Wasm, "")
-	if err != nil {
-		return nil, err
-	}
-	return ywasm.(cwasm.Wasm), nil
-}
-
-func (t terminal) MakeContainer(c *podman.ContainerCreateOptions) (podman.Container, error) {
-	ycon, err := t.y.Make(anchor.Container, c)
-	if err != nil {
-		return nil, err
-	}
-	return ycon.(podman.Container), nil
-}
-
-func (t terminal) MakeNetwork() (podman.Network, error) {
-	return nil, nil
-}
-
-// MakeVolume…
-func (t terminal) MakeVolume() (podman.Volume, error) {
-	return nil, nil
-}
-
-func (t terminal) Get() interface{} {
-	kind, y := t.y.Get()
+func (t terminal) Get() any {
+	k, y := t.y.Get()
 	if y == nil {
 		return nil
 	}
-	switch kind {
-	case anchor.Server:
-		return ysrvSrv{y.(srv.YServer)}
-	case anchor.Chan:
-		return yvalveChan{y.(valve.YValve)}
-	case anchor.Proc:
-		return yprocProc{y.(proc.YProc)}
-	case anchor.Nameserver:
-		return yNameserver{y.(dns.YNameserver)}
-	case anchor.Docker:
-		return y.(edocker.YContainer)
-	case anchor.OnJoin:
-		return ysubSub{y.(pubsub.YSubscription)}
-	case anchor.OnLeave:
-		return ysubSub{y.(pubsub.YSubscription)}
 
-	// TODO need to add WASM and Container elements
-	case anchor.Container:
-		return y.(pm.YContainer)
+	// Get the maker for the specified type
+	maker, ok := GetElementMaker(reflect.TypeOf(y))
+	if !ok {
+		panic(fmt.Sprintf("client/circuit mismatch, kind=%v", k))
 	}
 
-	panic(fmt.Sprintf("client/circuit mismatch, kind=%v", kind))
+	return maker.Get(y)
 }
 
 func (t terminal) Scrub() {

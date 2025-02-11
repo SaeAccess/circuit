@@ -8,6 +8,7 @@
 package docker
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"os/exec"
@@ -23,14 +24,6 @@ import (
 
 type Container interface {
 	ds.Container
-	// Scrub()
-	// IsDone() bool
-	// Peek() (*ds.Stat, error)
-	// Signal(sig string) error
-	// Wait() (*ds.Stat, error)
-	// Stdin() io.WriteCloser
-	// Stdout() io.ReadCloser
-	// Stderr() io.ReadCloser
 	X() circuit.X
 }
 
@@ -47,7 +40,7 @@ func init() {
 	anchor.RegisterElement("docker", ef, yf)
 }
 
-func MakeContainer(run ds.Run) (_ Container, err error) {
+func makeContainer(run ds.Run) (_ Container, err error) {
 	if dkr == "" {
 		return nil, errors.New("docker not enabled on this server")
 	}
@@ -105,6 +98,16 @@ func (con *container) Peek() (stat *ds.Stat, err error) {
 	return
 }
 
+func (con *container) PeekBytes() []byte {
+	s, err := con.Peek()
+	if err != nil {
+		return []byte{}
+	}
+
+	b, _ := json.MarshalIndent(s, "", "\t")
+	return b
+}
+
 func (con *container) Scrub() {
 	exec.Command(dkr, "rm", con.name).Run()
 }
@@ -139,7 +142,7 @@ func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
 	if !ok {
 		return nil, errors.New("invalid argument")
 	}
-	x, err := MakeContainer(run)
+	x, err := makeContainer(run)
 	if err != nil {
 		return nil, err
 	}

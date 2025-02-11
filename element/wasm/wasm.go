@@ -1,6 +1,7 @@
 package wasm
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -114,6 +115,16 @@ func (con *container) Stderr() io.ReadCloser {
 
 func (con *container) Peek() (stat *ws.Status, err error) {
 	return
+}
+
+func (con *container) PeekBytes() []byte {
+	s, err := con.Peek()
+	if err != nil {
+		return []byte{}
+	}
+
+	b, _ := json.MarshalIndent(s, "", "\t")
+	return b
 }
 
 func (con *container) Scrub() {

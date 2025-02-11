@@ -9,7 +9,7 @@ package client
 
 import (
 	"io"
-	
+
 	"github.com/gocircuit/circuit/element/proc"
 )
 
@@ -34,22 +34,12 @@ type Cmd struct {
 	Scrub bool
 }
 
-func retypeProcStat(c proc.Cmd) Cmd {
-	return Cmd{
-		Env: c.Env,
-		Dir: c.Dir,
-		Path: c.Path,
-		Args: c.Args,
-		Scrub: c.Scrub,
-	}
-}
-
 func (cmd Cmd) retype() proc.Cmd {
 	return proc.Cmd{
-		Env: cmd.Env,
-		Dir: cmd.Dir,
-		Path: cmd.Path,
-		Args: cmd.Args,
+		Env:   cmd.Env,
+		Dir:   cmd.Dir,
+		Path:  cmd.Path,
+		Args:  cmd.Args,
 		Scrub: cmd.Scrub,
 	}
 }
@@ -69,21 +59,13 @@ type ProcStat struct {
 }
 
 const (
-	Running = "running"
-	Exited = "exited"
-	Stopped = "stopped"
-	Signaled = "signaled"
+	Running   = "running"
+	Exited    = "exited"
+	Stopped   = "stopped"
+	Signaled  = "signaled"
 	Continued = "continued"
-	Unknown = "unknown"
+	Unknown   = "unknown"
 )
-
-func statstat(s proc.Stat) ProcStat {
-	return ProcStat{
-		Cmd: retypeProcStat(s.Cmd),
-		Exit: s.Exit,
-		Phase: s.Phase,
-	}
-}
 
 // Proc provides access to a circuit process element.
 // All methods panic if the hosting circuit server dies.
@@ -121,24 +103,4 @@ type Proc interface {
 
 	// Stderr returns the standard error of the underlying OS process.
 	Stderr() io.ReadCloser
-}
-
-type yprocProc struct {
-	proc.YProc
-}
-
-func (y yprocProc) Wait() (ProcStat, error) {
-	s, err := y.YProc.Wait()
-	if err != nil {
-		return ProcStat{}, err
-	}
-	return statstat(s), nil
-}
-
-func (y yprocProc) GetCmd() Cmd {
-	return retypeProcStat(y.YProc.GetCmd())
-}
-
-func (y yprocProc) Peek() ProcStat {
-	return statstat(y.YProc.Peek())
 }

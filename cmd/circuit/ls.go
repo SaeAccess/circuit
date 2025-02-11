@@ -10,11 +10,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/client/docker"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -64,7 +64,6 @@ func ls(x *cli.Context) (err error) {
 	return
 }
 
-// TODO fix to use Named interface to determine name of anchor element
 func list(level int, prefix string, anchor client.Anchor, recurse, long, depth bool) {
 	if anchor == nil {
 		return
@@ -74,27 +73,31 @@ func list(level int, prefix string, anchor client.Anchor, recurse, long, depth b
 	for n, a := range anchor.View() {
 		e := &entry{n: n, a: a}
 		v := a.Get()
-		switch t := v.(type) {
-		case client.Server:
-			e.k = "server"
-		case client.Chan:
-			e.k = "chan"
-		case client.Proc:
-			e.k = "proc"
-			// if t.GetCmd().Scrub {
-			// 	e.k = "proc-autoscrub"
-			// } else {
-			// 	e.k = "proc"
-			// }
-		case client.Nameserver:
-			e.k = "dns"
-		case docker.Container:
-			e.k = "docker"
-		case client.Subscription:
-			e.k = "@" + t.Peek().Source
-		default:
-			e.k = "·"
+		if maker, ok := client.GetElementMaker(reflect.TypeOf(v)); ok {
+			e.k = maker.Name()
 		}
+
+		// switch t := v.(type) {
+		// case client.Server:
+		// 	e.k = "server"
+		// case client.Chan:
+		// 	e.k = "chan"
+		// case client.Proc:
+		// 	e.k = "proc"
+		// 	// if t.GetCmd().Scrub {
+		// 	// 	e.k = "proc-autoscrub"
+		// 	// } else {
+		// 	// 	e.k = "proc"
+		// 	// }
+		// case client.Nameserver:
+		// 	e.k = "dns"
+		// case docker.Container:
+		// 	e.k = "docker"
+		// case client.Subscription:
+		// 	e.k = "@" + t.Peek().Source
+		// default:
+		// 	e.k = "·"
+		// }
 		c = append(c, e)
 	}
 	sort.Sort(c)

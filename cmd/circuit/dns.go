@@ -9,6 +9,7 @@ package main
 
 import (
 	"github.com/gocircuit/circuit/client"
+	"github.com/gocircuit/circuit/client/makers"
 	"github.com/pkg/errors"
 
 	"github.com/urfave/cli/v2"
@@ -76,7 +77,8 @@ func mkdns(x *cli.Context) (err error) {
 	}
 	w, _ := parseGlob(args.First())
 
-	if _, err = c.Walk(w).MakeNameserver(addr); err != nil {
+	//if _, err = c.Walk(w).MakeNameserver(addr); err != nil {
+	if _, err = c.Walk(w).Make(makers.NameserverType, addr); err != nil {
 		return errors.Wrapf(err, "mkdns error: %s", err)
 	}
 	return

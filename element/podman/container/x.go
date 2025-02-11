@@ -57,6 +57,10 @@ func (x XContainer) Peek() (*c.InspectContainerData, error) {
 	return c, errors.Pack(err)
 }
 
+func (x XContainer) PeekBytes() []byte {
+	return x.Container.PeekBytes()
+}
+
 // Get port mappings
 func (x XContainer) Ports() []string {
 	return x.Container.Ports()
@@ -119,20 +123,21 @@ type YContainer struct {
 	X circuit.X
 }
 
-func (y YContainer) CheckPoint() error {
-	r := y.X.Call("CheckPoint")
+func (y YContainer) CheckPoint(opts *c.ContainerCheckpointOptions) error {
+	r := y.X.Call("CheckPoint", opts)
 	return errors.Unpack(r[0])
 }
 
-func (y YContainer) Clone() (con c.Container, err error) {
-	r := y.X.Call("Clone")
-	con, _ = r[0].(c.Container)
-	return con, errors.Unpack(r[1])
-}
+// func (y YContainer) Clone() (con c.Container, err error) {
+// 	r := y.X.Call("Clone")
+// 	con, _ = r[0].(c.Container)
+// 	return con, errors.Unpack(r[1])
+// }
 
-func (y YContainer) Exec() error {
-	r := y.X.Call("Exec")
-	return errors.Unpack(r[0])
+func (y YContainer) Exec(opts *c.ContainerExecOptions) ([]byte, error) {
+	r := y.X.Call("Exec", opts)
+	b, _ := r[0].([]byte)
+	return b, errors.Unpack(r[1])
 }
 
 func (y YContainer) Inspect() (stat *c.InspectContainerData, err error) {
@@ -156,11 +161,15 @@ func (y YContainer) Peek() (stat *c.InspectContainerData, err error) {
 	return stat, errors.Unpack(r[1])
 }
 
+func (y YContainer) PeekBytes() []byte {
+	return y.X.Call("PeekBytes")[0].([]byte)
+}
+
 func (y YContainer) Ports() []string {
 	return y.X.Call("Ports")[0].([]string)
 }
 
-func (y YContainer) Restore() error {
+func (y YContainer) Restore(opts *c.ContainerRestoreOptions) error {
 	r := y.X.Call("Restore")
 	return errors.Unpack(r[0])
 }
@@ -179,7 +188,7 @@ func (y YContainer) Start() error {
 	return errors.Unpack(r[0])
 }
 
-func (y YContainer) Stop() error {
+func (y YContainer) Stop(opts *c.ContainerStopOpts) error {
 	r := y.X.Call("Stop")
 	return errors.Unpack(r[0])
 }

@@ -26,6 +26,10 @@ func (x XNameserver) Set(rr string) error {
 	return errors.Pack(err)
 }
 
+func (x XNameserver) PeekBytes() []byte {
+	return x.Nameserver.PeekBytes()
+}
+
 // Y
 type YNameserver struct {
 	X circuit.X
@@ -46,4 +50,8 @@ func (y YNameserver) Scrub() {
 
 func (y YNameserver) Peek() Stat {
 	return y.X.Call("Peek")[0].(Stat)
+}
+
+func (y YNameserver) PeekBytes() []byte {
+	return y.X.Call("Peekbytes")[0].([]byte)
 }

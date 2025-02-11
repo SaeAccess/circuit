@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/gocircuit/circuit/client"
+	"github.com/gocircuit/circuit/client/makers"
 	"github.com/pkg/errors"
 
 	"github.com/urfave/cli/v2"
@@ -94,7 +95,8 @@ func mkchan(x *cli.Context) (err error) {
 	if err != nil || n < 0 {
 		return errors.New("second argument to mkchan must be a non-negative integral capacity")
 	}
-	if _, err = a.MakeChan(n); err != nil {
+	if _, err := a.Make(makers.ChanType, n); err != nil {
+		// if _, err = a.MakeChan(n); err != nil {
 		return errors.Wrapf(err, "mkchan error: %s", err)
 	}
 	return

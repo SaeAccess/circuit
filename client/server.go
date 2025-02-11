@@ -10,8 +10,6 @@ package client
 import (
 	"io"
 	"time"
-
-	srv "github.com/gocircuit/circuit/element/server"
 )
 
 // ServerStat encloses subscription state information.
@@ -24,13 +22,6 @@ type ServerStat struct {
 
 }
 
-func srvStat(s srv.Stat) ServerStat {
-	return ServerStat{
-		Addr:   s.Addr,
-		Joined: s.Joined,
-	}
-}
-
 // Server…
 // All methods panic if the hosting circuit server dies.
 type Server interface {
@@ -38,12 +29,4 @@ type Server interface {
 	Peek() ServerStat
 	Rejoin(string) error
 	Suicide()
-}
-
-type ysrvSrv struct {
-	srv.YServer
-}
-
-func (y ysrvSrv) Peek() ServerStat {
-	return srvStat(y.YServer.Peek())
 }

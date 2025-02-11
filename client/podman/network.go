@@ -15,6 +15,8 @@ type Network interface {
 
 	// List() []Network
 
+	PeekBytes() []byte
+
 	// Reload firewall rules for one or more containers
 	Reload() error
 
@@ -68,15 +70,18 @@ type NetworkCreateOptions struct {
 	Subnets           []string `json:"subnets,omitempty"`
 	Routes            []string `json:"routes,omitempty"`
 	IPv6              bool     `json:"ipv6,omitempty"`
+	Name              string   `json:"name,omitempty"`
 	// Mapping of driver options and values.
 	Options []string `json:"options,omitempty"`
 	// IgnoreIfExists if true, do not fail if the network already exists
 	IgnoreIfExists bool `json:"ignore_if_exists,omitempty"`
 	// InterfaceName sets the NetworkInterface in the network config
 	InterfaceName string `json:"interface_name,omitempty"`
+
+	Scrub bool `json:"scrub,omitempty"`
 }
 
-func (c *NetworkCreateOptions) CmdLine(network string) []string {
+func (c *NetworkCreateOptions) CmdLine() []string {
 	var args = []string{"network", "create"}
 
 	args = appendB(args, "--disable-dns", c.DisableDNS)
@@ -94,9 +99,7 @@ func (c *NetworkCreateOptions) CmdLine(network string) []string {
 	args = appendSA(args, "--route", c.Routes)
 	args = appendSA(args, "--subnet", c.Subnets)
 
-	if network != "" {
-		args = append(args, network)
-	}
+	args = append(args, c.Name)
 
 	return args
 }

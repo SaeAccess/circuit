@@ -24,6 +24,7 @@ type Container interface {
 	// Stats()
 	// Peek at the container's resource ussage statistics
 	Peek() (*InspectContainerData, error)
+	PeekBytes() []byte
 
 	// Get port mappings
 	Ports() []string

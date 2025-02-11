@@ -8,13 +8,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 
-	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/client/docker"
-	"github.com/gocircuit/circuit/element/podman/container"
+	"github.com/gocircuit/circuit/anchor"
 	"github.com/pkg/errors"
 
 	"github.com/urfave/cli/v2"
@@ -63,43 +59,17 @@ func peek(x *cli.Context) (err error) {
 	if args.Len() != 1 {
 		return errors.New("peek needs one anchor argument")
 	}
+
 	w, _ := parseGlob(args.First())
-	switch t := c.Walk(w).Get().(type) {
-	case client.Server:
-		buf, _ := json.MarshalIndent(t.Peek(), "", "\t")
-		fmt.Println(string(buf))
-	case client.Chan:
-		buf, _ := json.MarshalIndent(t.Stat(), "", "\t")
-		fmt.Println(string(buf))
-	case client.Proc:
-		buf, _ := json.MarshalIndent(t.Peek(), "", "\t")
-		fmt.Println(string(buf))
-	case client.Nameserver:
-		buf, _ := json.MarshalIndent(t.Peek(), "", "\t")
-		fmt.Println(string(buf))
-	case docker.Container:
-		stat, err := t.Peek()
-		if err != nil {
-			return errors.Wrapf(err, "%v", err)
-		}
-		buf, _ := json.MarshalIndent(stat, "", "\t")
-		fmt.Println(string(buf))
-	case client.Subscription:
-		buf, _ := json.MarshalIndent(t.Peek(), "", "\t")
-		fmt.Println(string(buf))
-	case container.Container:
-		stat, err := t.Peek()
-		if err != nil {
-			return errors.Wrapf(err, "error calling container's peek() at anchor: %v", strings.Join(w, "/"))
-		}
-		buf, _ := json.MarshalIndent(stat, "", "\t")
-		fmt.Println(string(buf))
-	case nil:
-		buf, _ := json.MarshalIndent(nil, "", "\t")
-		fmt.Println(string(buf))
-	default:
-		return errors.New("unknown element")
+
+	// Check if anchor supports the Peeker interface
+	av := c.Walk(w).Get()
+	if p, ok := av.(anchor.Peeker); ok {
+		fmt.Println(string(p.PeekBytes()))
+	} else {
+		return fmt.Errorf("anchor type '%T' does not support the anchor.Peeker interface", av)
 	}
+
 	return
 }
 

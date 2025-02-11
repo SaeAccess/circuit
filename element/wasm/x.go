@@ -44,6 +44,10 @@ func (x XWasm) Peek() (*ws.Status, error) {
 	return stat, errors.Pack(err)
 }
 
+func (x XWasm) PeekBytes() []byte {
+	return x.Wasm.PeekBytes()
+}
+
 type YWasm struct {
 	X circuit.X
 }
@@ -71,6 +75,10 @@ func (y YWasm) Peek() (stat *ws.Status, err error) {
 	r := y.X.Call("Peek")
 	stat, _ = r[0].(*ws.Status)
 	return stat, errors.Unpack(r[1])
+}
+
+func (y YWasm) PeekBytes() []byte {
+	return y.X.Call("PeekBytes")[0].([]byte)
 }
 
 func (y YWasm) Stdin() io.WriteCloser {

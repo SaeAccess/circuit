@@ -51,6 +51,10 @@ func (x XContainer) Peek() (*ds.Stat, error) {
 	return stat, errors.Pack(err)
 }
 
+func (x XContainer) PeekBytes() []byte {
+	return x.Container.PeekBytes()
+}
+
 // YContainer is a circuit container that wraps a Docker container stub/proxy impl.
 type YContainer struct {
 	X circuit.X
@@ -79,6 +83,10 @@ func (y YContainer) Peek() (stat *ds.Stat, err error) {
 	r := y.X.Call("Peek")
 	stat, _ = r[0].(*ds.Stat)
 	return stat, errors.Unpack(r[1])
+}
+
+func (y YContainer) PeekBytes() []byte {
+	return y.X.Call("Peekbytes")[0].([]byte)
 }
 
 func (y YContainer) Stdin() io.WriteCloser {

@@ -16,7 +16,7 @@ import (
 	"path"
 
 	"github.com/gocircuit/circuit/element/docker"
-	p "github.com/gocircuit/circuit/element/podman/container"
+	p "github.com/gocircuit/circuit/element/podman"
 	"github.com/gocircuit/circuit/kit/assemble"
 	"github.com/gocircuit/circuit/tissue"
 	"github.com/gocircuit/circuit/tissue/locus"

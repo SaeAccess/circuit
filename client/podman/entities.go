@@ -322,7 +322,9 @@ func (c *ContainerCreateOptions) CmdLine(name string) []string {
 	args = appendS(args, "--passwd-entry", c.PasswdEntry)
 	args = appendS(args, "--personality", c.Personality)
 	args = appendS(args, "--pid", c.PID)
-	args = appendI(args, "--pids-limit", *c.PIDsLimit)
+	if c.PIDsLimit != nil {
+		args = appendI(args, "--pids-limit", *c.PIDsLimit)
+	}
 	args = appendS(args, "--pidfile", c.PidFile)
 	args = appendS(args, "--platform", c.Platform)
 	args = appendS(args, "--pod", c.Pod)
@@ -544,6 +546,28 @@ func (o *ContainerStopOpts) CmdLine(name string) []string {
 	args := append([]string{}, "container", "stop")
 	args = appendB(args, "--ignore", o.Ignore)
 	args = appendI(args, "--time", o.Time)
+
+	args = append(args, name)
+	return args
+}
+
+type ContainerRemoveOptions struct {
+	CIDFile []string `json:"cidfile,omitempty"`
+	Depend  bool     `json:"depend,omitempty"`
+	Force   bool     `json:"force,omitempty"`
+	Ignore  bool     `json:"ignore,omitempty"`
+	Time    int      `json:"time,omitempty"`
+	Volume  bool     `json:"volume,omitempty"`
+}
+
+func (r *ContainerRemoveOptions) CmdLine(name string) []string {
+	args := append([]string{}, "container", "rm")
+	args = appendSA(args, "--cidfile", r.CIDFile)
+	args = appendB(args, "--depend", r.Depend)
+	args = appendB(args, "--force", r.Force)
+	args = appendB(args, "--ignore", r.Ignore)
+	args = appendI(args, "--time", r.Time)
+	args = appendB(args, "--volumes", r.Volume)
 
 	args = append(args, name)
 	return args

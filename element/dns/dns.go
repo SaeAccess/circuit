@@ -8,6 +8,7 @@
 package dns
 
 import (
+	"encoding/json"
 	"net"
 	"sync"
 
@@ -21,6 +22,7 @@ type Nameserver interface {
 	Set(rr string) error
 	Unset(name string)
 	Peek() Stat
+	PeekBytes() []byte
 	X() circuit.X
 }
 
@@ -140,4 +142,9 @@ func (ns *nameserver) Peek() Stat {
 		stat.Records[name] = ss
 	}
 	return stat
+}
+
+func (ns *nameserver) PeekBytes() []byte {
+	b, _ := json.MarshalIndent(ns.Peek(), "", "\t")
+	return b
 }

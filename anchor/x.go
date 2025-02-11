@@ -88,6 +88,7 @@ func (y YTerminal) View() map[string]YTerminal {
 	return u
 }
 
+// Make call the server to create the anchor and element
 func (y YTerminal) Make(kind string, arg interface{}) (yelm interface{}, err error) {
 	r := y.X.Call("Make", kind, arg)
 	if err = xerrors.Unpack(r[1]); err != nil {
@@ -107,6 +108,7 @@ func (y YTerminal) Make(kind string, arg interface{}) (yelm interface{}, err err
 	return factory(x)
 }
 
+// Get calls the server to get the remote anchor element
 func (y YTerminal) Get() (kind string, yelm interface{}) {
 	r := y.X.Call("Get")
 	kind = r[0].(string)

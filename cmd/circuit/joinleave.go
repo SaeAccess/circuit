@@ -8,6 +8,7 @@
 package main
 
 import (
+	"github.com/gocircuit/circuit/client/makers"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
@@ -58,7 +59,8 @@ func mkonjoin(x *cli.Context) (err error) {
 		return errors.New("mk@join needs an anchor argument")
 	}
 	w, _ := parseGlob(args.First())
-	if _, err = c.Walk(w).MakeOnJoin(); err != nil {
+	//if _, err = c.Walk(w).MakeOnJoin(); err != nil {
+	if _, err = c.Walk(w).Make(makers.JoinType, ""); err != nil {
 		return errors.Wrapf(err, "mk@join error: %s", err)
 	}
 	return
@@ -78,7 +80,8 @@ func mkonleave(x *cli.Context) (err error) {
 		return errors.New("mk@leave needs an anchor argument")
 	}
 	w, _ := parseGlob(args.First())
-	if _, err = c.Walk(w).MakeOnLeave(); err != nil {
+	//if _, err = c.Walk(w).MakeOnLeave(); err != nil {
+	if _, err = c.Walk(w).Make(makers.LeaveType, ""); err != nil {
 		return errors.Wrapf(err, "mk@leave error: %s", err)
 	}
 	return

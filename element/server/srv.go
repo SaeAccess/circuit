@@ -8,6 +8,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -23,6 +24,7 @@ import (
 type Server interface {
 	Profile(string) (io.ReadCloser, error)
 	Peek() Stat
+	PeekBytes() []byte
 	Rejoin(string) error // circuit address to join to
 	Suicide()
 	IsDone() bool
@@ -93,6 +95,11 @@ func (s *server) Peek() Stat {
 		Addr:   s.addr,
 		Joined: s.joined,
 	}
+}
+
+func (s *server) PeekBytes() []byte {
+	b, _ := json.MarshalIndent(s.Peek(), "", "\t")
+	return b
 }
 
 func (s *server) IsDone() bool {

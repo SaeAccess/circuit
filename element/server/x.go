@@ -54,6 +54,10 @@ func (y YServer) Peek() Stat {
 	return y.X.Call("Peek")[0].(Stat)
 }
 
+func (y YServer) PeekBytes() []byte {
+	return y.X.Call("PeekBytes")[0].([]byte)
+}
+
 func (y YServer) Rejoin(addr string) error {
 	return errors.Unpack(y.X.Call("Rejoin", addr)[0])
 }

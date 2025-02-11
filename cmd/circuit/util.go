@@ -89,3 +89,184 @@ func readStdin[T any]() (*T, error) {
 
 	return &opts, nil
 }
+
+func ParseAnchor(x *cli.Context) (a []string, err error) {
+	args := x.Args()
+	if args.Len() < 1 {
+		return nil, errors.New("anchor argument is required")
+	}
+
+	w, _ := parseGlob(args.First())
+	return w, nil
+}
+
+type EmptyInterface interface{}
+
+func getAnchorType[T any](x *cli.Context, t string) (_ T, err error) {
+	// connect
+	c := dial(x)
+
+	var w []string
+	if w, err = ParseAnchor(x); err != nil {
+		var z T
+		return z, err
+	}
+
+	vol, ok := c.Walk(w).Get().(T)
+	if !ok {
+		var z T
+		return z, fmt.Errorf("anchor is not a podman %s", t)
+	}
+
+	return vol, nil
+}
+
+type Exists interface {
+	Exists() error
+}
+
+// TODO should return bool
+func checkAnchorType[T Exists](x *cli.Context, t string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	var at T
+	if at, err = getAnchorType[T](x, t); err != nil {
+		return
+	}
+
+	if err = at.Exists(); err != nil {
+		return errors.Wrapf(err, "%s does not exist", t)
+	}
+
+	return
+}
+
+type Inspecter[D any] interface {
+	Inspect() (*D, error)
+}
+
+func inspectAnchorType[T Inspecter[D], D any](x *cli.Context, t string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	var at T
+	if at, err = getAnchorType[T](x, t); err != nil {
+		return
+	}
+
+	var data *D
+	if data, err = at.Inspect(); err != nil {
+		return errors.Wrapf(err, "podman %s inspect error", t)
+	}
+
+	// write to stdout
+	buf, _ := json.MarshalIndent(data, "", "\t")
+	fmt.Println(string(buf))
+	return
+}
+
+type Reloader interface {
+	Reload() error
+}
+
+func reloadAnchorType[T Reloader](x *cli.Context, t string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	var at Reloader
+	if at, err = getAnchorType[T](x, t); err != nil {
+		return
+	}
+
+	if err = at.Reload(); err != nil {
+		return errors.Wrapf(err, "podman %s reload error", t)
+	}
+
+	return
+}
+
+type Updater[OPT any] interface {
+	Update(opt *OPT) error
+}
+
+func updateAnchorType[T Updater[OPT], OPT any](x *cli.Context, t string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	var at Updater[OPT]
+	if at, err = getAnchorType[T](x, t); err != nil {
+		return
+	}
+
+	var opts *OPT
+	if opts, err = readStdin[OPT](); err != nil {
+		return err
+	}
+
+	if err = at.Update(opts); err != nil {
+		return errors.Wrapf(err, "podman %s reload error", t)
+	}
+
+	return
+}
+
+type Pauser interface {
+	Pause() error
+}
+
+func pauseAnchorType[T Pauser](x *cli.Context, t string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	// get the container anchor
+	var at Pauser
+	if at, err = getAnchorType[T](x, t); err != nil {
+		return
+	}
+
+	if err = at.Pause(); err != nil {
+		return errors.Wrapf(err, "podman %s pause error", t)
+	}
+
+	return
+}
+
+type Restarter interface {
+	Restart() error
+}
+
+func restartAnchorType[T Restarter](x *cli.Context, t string) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = wrapError(r)
+		}
+	}()
+
+	// get the container anchor
+	var at T
+	if at, err = getAnchorType[T](x, t); err != nil {
+		return
+	}
+
+	if err = at.Restart(); err != nil {
+		return errors.Wrapf(err, "podman %s restart error", t)
+	}
+
+	return
+}

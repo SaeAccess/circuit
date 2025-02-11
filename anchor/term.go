@@ -24,6 +24,12 @@ type Element interface {
 	X() circuit.X
 }
 
+// Peeker provides a generic mechanism for peeking at any anchor type.  Each anchor
+// must implement the Peeker interface that converts its actual peek state to a byte array
+type Peeker interface {
+	PeekBytes() []byte
+}
+
 type ElementFactory func(t *Terminal, arg any) (Element, error)
 type YFactory func(x circuit.X) (any, error)
 
@@ -38,6 +44,8 @@ const (
 
 	// wasm
 	Wasm = "wasm"
+
+	Pod = "pod"
 
 	// oci container support by podman/containerd
 	Container = "container"

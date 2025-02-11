@@ -7,10 +7,6 @@
 
 package client
 
-import (
-	"github.com/gocircuit/circuit/element/dns"
-)
-
 // NameserverStat encloses process state information.
 type NameserverStat struct {
 
@@ -21,15 +17,7 @@ type NameserverStat struct {
 	Records map[string][]string
 }
 
-func nameserverStat(s dns.Stat) NameserverStat {
-	return NameserverStat{
-		Address: s.Address,
-		Records: s.Records,
-	}
-}
-
 type Nameserver interface {
-
 	Set(rr string) error
 
 	Unset(name string)
@@ -37,14 +25,8 @@ type Nameserver interface {
 	// Peek asynchronously returns the current state of the server.
 	Peek() NameserverStat
 
+	PeekBytes() []byte
+
 	// Scrub shuts down the nameserver and removes its circuit element.
 	Scrub()
-}
-
-type yNameserver struct {
-	dns.YNameserver
-}
-
-func (y yNameserver) Peek() NameserverStat {
-	return nameserverStat(y.YNameserver.Peek())
 }
