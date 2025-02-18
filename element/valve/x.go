@@ -10,6 +10,7 @@ package valve
 import (
 	"io"
 
+	"github.com/gocircuit/circuit/client"
 	xio "github.com/gocircuit/circuit/kit/x/io"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/gocircuit/circuit/use/errors"
@@ -55,7 +56,7 @@ func (x XValve) Cap() int {
 	return x.Valve.Cap()
 }
 
-func (x XValve) Stat() Stat {
+func (x XValve) Stat() client.ChanStat {
 	return x.Valve.Stat()
 }
 
@@ -93,8 +94,8 @@ func (y YValve) Cap() int {
 	return y.X.Call("Cap")[0].(int)
 }
 
-func (y YValve) Stat() Stat {
-	return y.X.Call("Stat")[0].(Stat)
+func (y YValve) Stat() client.ChanStat {
+	return y.X.Call("Stat")[0].(client.ChanStat)
 }
 
 func (y YValve) PeekBytes() []byte {

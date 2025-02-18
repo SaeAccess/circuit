@@ -4,22 +4,18 @@ import (
 	"reflect"
 
 	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/element/podman/container"
+	"github.com/gocircuit/circuit/client/podman"
 )
 
 func init() {
 	client.RegisterElementMaker(&containerElementMaker{
-		client.NewBaseElementMaker("container", reflect.TypeOf(container.YContainer{})),
+		client.NewBaseElementMaker("container", ContainerType),
 	})
 }
 
-var ContainerType = reflect.TypeOf(container.YContainer{})
+var ContainerType = reflect.TypeOf((*podman.Container)(nil)).Elem()
 
 // implementation for a specific maker
 type containerElementMaker struct {
 	client.BaseElementMaker
-}
-
-func (c *containerElementMaker) Get(v any) any {
-	return v.(container.YContainer)
 }

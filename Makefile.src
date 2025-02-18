@@ -1,0 +1,11 @@
+nix:
+	go build -o $(GOPATH)/bin/circuit1 cmd/main.go cmd/server.go cmd/hmac.go \
+		cmd/chan.go cmd/dns.go cmd/joinleave.go \
+		cmd/ls.go cmd/wait.go cmd/util.go \
+		cmd/start.go cmd/procdkr.go cmd/peek.go \
+		cmd/load.go cmd/std.go cmd/recv.go \
+		cmd/circuit.go cmd/network.go cmd/pod.go cmd/podman.go \
+		cmd/volume.go
+
+clean:
+	rm $(GOPATH)/bin/circuit

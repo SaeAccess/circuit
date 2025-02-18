@@ -1,19 +1,18 @@
 package makers
 
 import (
-	"errors"
 	"reflect"
 
 	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/element/valve"
+	"github.com/pkg/errors"
 )
 
-var ChanType = reflect.TypeOf(valve.YValve{})
+var ChanType = reflect.TypeOf((*client.Chan)(nil)).Elem() //valve.YValve{})
 
 func init() {
 	client.RegisterElementMaker(&chanElementMaker{
-		client.NewBaseElementMaker("chan", reflect.TypeOf(valve.YValve{})),
+		client.NewBaseElementMaker("chan", ChanType),
 	})
 }
 
@@ -22,39 +21,38 @@ type chanElementMaker struct {
 	client.BaseElementMaker
 }
 
-func (b *chanElementMaker) Make(y anchor.YTerminal, arg any) (any, error) {
-	v, err := y.Make(b.Name(), arg)
+func (b *chanElementMaker) Make(y anchor.YTerminal, arg any) (v any, err error) {
+	v, err = y.Make(b.Name(), arg)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check type of v
-	if reflect.TypeOf(v) != b.Type() {
-		return nil, errors.New("mismatch chan")
+	if !reflect.TypeOf(v).Implements(ChanType) {
+		return nil, errors.Wrapf(client.ErrMismatchType, "%v does not implement %v", reflect.TypeOf(v), ChanType)
 	}
 
 	// v can now be type asserted to t whithout error
-	return yvalveChan{v.(valve.YValve)}, nil
+	return v, nil // yvalveChan{v.(valve.YValve)}, nil
 }
 
-func (c *chanElementMaker) Get(v any) any {
-	return yvalveChan{v.(valve.YValve)}
-}
+// func (c *chanElementMaker) Get(v any) any {
+// 	return yvalveChan{v.(valve.YValve)}
+// }
 
-func retypeChanStat(s valve.Stat) client.ChanStat {
-	return client.ChanStat{
-		Cap:     s.Cap,
-		Closed:  s.Closed,
-		Aborted: s.Aborted,
-		NumSend: s.NumSend,
-		NumRecv: s.NumRecv,
-	}
-}
+// func retypeChanStat(s valve.Stat) client.ChanStat {
+// 	return client.ChanStat{
+// 		// Cap:     s.Cap,
+// 		Closed:  s.Closed,
+// 		Aborted: s.Aborted,
+// 		NumSend: s.NumSend,
+// 		NumRecv: s.NumRecv,
+// 	}
+// }
 
-type yvalveChan struct {
-	valve.YValve
-}
+// type yvalveChan struct {
+// 	valve.YValve
+// }
 
-func (y yvalveChan) Stat() client.ChanStat {
-	return retypeChanStat(y.YValve.Stat())
-}
+// func (y yvalveChan) Stat() client.ChanStat {
+// 	return y.YValve.Stat() //retypeChanStat(y.YValve.Stat())
+// }

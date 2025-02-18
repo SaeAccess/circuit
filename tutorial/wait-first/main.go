@@ -9,10 +9,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/gocircuit/circuit/client"
+	"github.com/gocircuit/circuit/client/makers"
 )
 
 const n = 5
@@ -35,14 +37,18 @@ func main() {
 	for i := 0; i < n; i++ {
 		cmd := client.Cmd{
 			Path: "/bin/sleep",
-			Args: []string{strconv.Itoa(3+i*3)},
+			Args: []string{strconv.Itoa(3 + i*3)},
 		}
 		i_ := i
 		go func() {
 			// Pick a random circuit server to run payload on.
 			t := pickServer(c).Walk([]string{"wait-first", strconv.Itoa(i_)})
 			// Execute the process and store it in the anchor.
-			p, _ := t.MakeProc(cmd)
+			pa, _ := t.Make(makers.ProcType, cmd)
+			p, ok := pa.(client.Proc)
+			if !ok {
+				fmt.Printf("type does not implement client.Proc, type=%T", pa)
+			}
 			// Close the process standard input to indicte no intention to write data.
 			p.Stdin().Close()
 			// Block until the process exits.

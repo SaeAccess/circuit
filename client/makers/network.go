@@ -4,22 +4,18 @@ import (
 	"reflect"
 
 	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/element/podman/network"
+	"github.com/gocircuit/circuit/client/podman"
 )
 
 func init() {
 	client.RegisterElementMaker(&networkElementMaker{
-		client.NewBaseElementMaker("network", reflect.TypeOf(network.YNetwork{})),
+		client.NewBaseElementMaker("network", NetworkType),
 	})
 }
 
-var NetworkType = reflect.TypeOf(network.YNetwork{})
+var NetworkType = reflect.TypeOf((*podman.Network)(nil)).Elem()
 
 // implementation for a specific maker
 type networkElementMaker struct {
 	client.BaseElementMaker
-}
-
-func (c *networkElementMaker) Get(v any) any {
-	return v.(network.YNetwork)
 }

@@ -8,6 +8,7 @@
 package dns
 
 import (
+	"github.com/gocircuit/circuit/client"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/gocircuit/circuit/use/errors"
 )
@@ -48,8 +49,8 @@ func (y YNameserver) Scrub() {
 	y.X.Call("Scrub")
 }
 
-func (y YNameserver) Peek() Stat {
-	return y.X.Call("Peek")[0].(Stat)
+func (y YNameserver) Peek() client.NameserverStat {
+	return y.X.Call("Peek")[0].(client.NameserverStat)
 }
 
 func (y YNameserver) PeekBytes() []byte {

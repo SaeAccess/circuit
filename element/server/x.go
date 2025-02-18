@@ -11,6 +11,7 @@ import (
 	// "fmt"
 	"io"
 
+	cli "github.com/gocircuit/circuit/client/server"
 	xio "github.com/gocircuit/circuit/kit/x/io"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/gocircuit/circuit/use/errors"
@@ -50,8 +51,8 @@ func (y YServer) Profile(name string) (rc io.ReadCloser, err error) {
 	return xio.NewYReadCloser(r[0]), nil
 }
 
-func (y YServer) Peek() Stat {
-	return y.X.Call("Peek")[0].(Stat)
+func (y YServer) Peek() cli.ServerStat {
+	return y.X.Call("Peek")[0].(cli.ServerStat)
 }
 
 func (y YServer) PeekBytes() []byte {

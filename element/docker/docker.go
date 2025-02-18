@@ -10,6 +10,7 @@ package docker
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 	"runtime"
@@ -140,7 +141,7 @@ func (con *container) X() circuit.X {
 func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
 	run, ok := arg.(ds.Run)
 	if !ok {
-		return nil, errors.New("invalid argument")
+		return nil, fmt.Errorf("invalid argument to docker container element factory, arg=%T", arg)
 	}
 	x, err := makeContainer(run)
 	if err != nil {

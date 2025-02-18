@@ -1,17 +1,18 @@
 package makers
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/element/server"
+	"github.com/pkg/errors"
 )
+
+var ServerType = reflect.TypeOf((*client.Server)(nil)).Elem()
 
 func init() {
 	client.RegisterElementMaker(&serverElementMaker{
-		client.NewBaseElementMaker("server", reflect.TypeOf(server.YServer{})),
+		client.NewBaseElementMaker("server", ServerType),
 	})
 }
 
@@ -27,29 +28,25 @@ func (b *serverElementMaker) Make(y anchor.YTerminal, arg any) (v any, err error
 	}
 
 	// Check type of v
-	if reflect.TypeOf(v) != b.Type() {
-		return nil, fmt.Errorf("client/circuit mismatch, kind=%v", b.Name())
+	if !reflect.TypeOf(v).Implements(b.Type()) {
+		return nil, errors.Wrapf(client.ErrMismatchType, "%v does not implement %v", reflect.TypeOf(v), ServerType)
 	}
 
 	// v can now be type asserted to t whithout error
-	return ysrvSrv{v.(server.YServer)}, nil
+	return v, nil //ysrvSrv{v.(server.YServer)}, nil
 }
 
-func (c *serverElementMaker) Get(v any) any {
-	return ysrvSrv{v.(server.YServer)}
-}
+// func srvStat(s server.Stat) client.ServerStat {
+// 	return client.ServerStat{
+// 		Addr:   s.Addr,
+// 		Joined: s.Joined,
+// 	}
+// }
 
-func srvStat(s server.Stat) client.ServerStat {
-	return client.ServerStat{
-		Addr:   s.Addr,
-		Joined: s.Joined,
-	}
-}
+// type ysrvSrv struct {
+// 	server.YServer
+// }
 
-type ysrvSrv struct {
-	server.YServer
-}
-
-func (y ysrvSrv) Peek() client.ServerStat {
-	return srvStat(y.YServer.Peek())
-}
+// func (y ysrvSrv) Peek() client.ServerStat {
+// 	return srvStat(y.YServer.Peek())
+// }

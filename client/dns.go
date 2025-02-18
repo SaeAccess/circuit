@@ -7,14 +7,24 @@
 
 package client
 
+import "encoding/json"
+
 // NameserverStat encloses process state information.
 type NameserverStat struct {
 
 	// IP address of the nameserver
-	Address string
+	Address string `json:"addr"`
 
 	// Resource records resolved by this nameserver
-	Records map[string][]string
+	Records map[string][]string `json:"records"`
+}
+
+func (s NameserverStat) String() string {
+	b, err := json.MarshalIndent(s, "", "\t")
+	if err != nil {
+		panic(0)
+	}
+	return string(b)
 }
 
 type Nameserver interface {

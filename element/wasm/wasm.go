@@ -21,14 +21,6 @@ type Statistics struct {
 
 type Wasm interface {
 	ws.Wasm
-	// Scrub()
-	// IsDone() bool
-	// Peek() (*ws.Status, error)
-	// Signal(sig string) error
-	// Wait() (*ws.Status, error)
-	// Stdin() io.WriteCloser
-	// Stdout() io.ReadCloser
-	// Stderr() io.ReadCloser
 	X() circuit.X
 }
 

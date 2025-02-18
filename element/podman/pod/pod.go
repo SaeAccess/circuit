@@ -29,7 +29,7 @@ func init() {
 	anchor.RegisterElement(anchor.Pod, ef, yf)
 }
 
-func MakePod(opts c.PodCreateOptions) (Pod, error) {
+func makePod(opts c.PodCreateOptions) (Pod, error) {
 	// Check if podman enabled on this server
 	// TODO make this a capability of the server when it joins the cluster.
 	if podman.Path == "" {
@@ -151,10 +151,10 @@ func (p *pod) X() circuit.X {
 func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
 	opts, ok := arg.(c.PodCreateOptions)
 	if !ok {
-		return nil, fmt.Errorf("invalid argument to network element factory, arg=%T", arg)
+		return nil, fmt.Errorf("invalid argument to pod element factory, arg=%T", arg)
 	}
 
-	n, err := MakePod(opts)
+	n, err := makePod(opts)
 	if err != nil {
 		return nil, err
 	}

@@ -33,6 +33,17 @@ import (
 	"time"
 
 	"github.com/gocircuit/circuit/client"
+	"github.com/gocircuit/circuit/client/makers"
+	_ "github.com/gocircuit/circuit/element/dns"
+	_ "github.com/gocircuit/circuit/element/docker"
+	_ "github.com/gocircuit/circuit/element/podman/container"
+	_ "github.com/gocircuit/circuit/element/podman/network"
+	_ "github.com/gocircuit/circuit/element/podman/pod"
+	_ "github.com/gocircuit/circuit/element/podman/volume"
+	_ "github.com/gocircuit/circuit/element/proc"
+	_ "github.com/gocircuit/circuit/element/server"
+	_ "github.com/gocircuit/circuit/element/valve"
+	_ "github.com/gocircuit/circuit/element/wasm"
 )
 
 // pickServer returns the root anchor of a randomly-chosen circuit server in the cluster.
@@ -113,7 +124,6 @@ func main() {
 
 // Create or get back channel
 func findBackChan(c *client.Client, isNucleus bool) (backAnchor string, backChan client.Chan) {
-	var err error
 	if isNucleus {
 		// The nucleus does not proceed with execution until it acquires permission
 		// to send the the virus' back channel.
@@ -122,11 +132,12 @@ func findBackChan(c *client.Client, isNucleus bool) (backAnchor string, backChan
 	} else {
 		// Make the back channel
 		backServer := pickServer(c)
-		backChan, err = backServer.Walk([]string{"virus", "back"}).MakeChan(3)
+		bc, err := backServer.Walk([]string{"virus", "back"}).Make(makers.ChanType, 3)
 		if err != nil {
 			println(err.Error())
 			os.Exit(1)
 		}
+		backChan = bc.(client.Chan)
 		backAnchor = path.Join("/", backServer.ServerID(), "virus", "back")
 	}
 	return
@@ -154,11 +165,12 @@ func spawnPayload(c *client.Client, epoch int) (payloadAnchor string) {
 	a := pickServer(c)
 	// Run the payload
 	payloadEpoch := strconv.Itoa(epoch + 1)
-	pservice, err := a.Walk([]string{"virus", "payload", payloadEpoch}).MakeProc(service)
+	p, err := a.Walk([]string{"virus", "payload", payloadEpoch}).Make(makers.ProcType, service)
 	if err != nil {
 		println("payload not created:", err.Error())
 		os.Exit(1)
 	}
+	pservice := p.(client.Proc)
 	if err := pservice.Peek().Exit; err != nil {
 		println("payload not started:", err.Error())
 		os.Exit(1)
@@ -187,11 +199,12 @@ func spawnNucleus(c *client.Client, backAnchor, payloadAnchor string, epoch int)
 		},
 		Scrub: true,
 	}
-	pnucleus, err := b.Walk([]string{"virus", "nucleus", nucleusEpoch}).MakeProc(nucleus)
+	p, err := b.Walk([]string{"virus", "nucleus", nucleusEpoch}).Make(makers.ProcType, nucleus)
 	if err != nil {
 		println("nucleus not created:", err.Error())
 		os.Exit(1)
 	}
+	pnucleus := p.(client.Proc)
 	if err := pnucleus.Peek().Exit; err != nil {
 		println("nucleus not started:", err.Error())
 		os.Exit(1)

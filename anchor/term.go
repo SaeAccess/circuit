@@ -13,7 +13,7 @@ import (
 	"log"
 	"sync"
 
-	srv "github.com/gocircuit/circuit/element/server"
+	"github.com/gocircuit/circuit/client/server"
 	"github.com/gocircuit/circuit/kit/pubsub"
 	"github.com/gocircuit/circuit/use/circuit"
 )
@@ -58,7 +58,7 @@ const (
 )
 
 func init() {
-	registerServer()
+	//registerServer()
 	registerOnJoin()
 	registerOnLeave()
 }
@@ -184,9 +184,11 @@ func (t *Terminal) Scrub() {
 	if !ok {
 		return
 	}
-	if _, ok := u.elem.(srv.Server); ok {
+
+	if _, ok := u.elem.(server.Server); ok {
 		return // Cannot scrub server anchors
 	}
+
 	u.elem.Scrub()
 	t.carrier().Set(nil)
 }
@@ -209,6 +211,8 @@ func (r *elementFactoryRepo) Register(kind string, efactory ElementFactory, yfac
 	if _, ok := r.GetEF(kind); ok {
 		panic(fmt.Sprintf("%s element already registered", kind))
 	}
+
+	//log.Printf("registering element factory '%s'", kind)
 	r.ef.Store(kind, factoryItem{efactory, yfactory})
 }
 
@@ -226,17 +230,6 @@ func (r *elementFactoryRepo) GetYF(kind string) (YFactory, bool) {
 		return nil, false
 	}
 	return v.(factoryItem).yf, true
-}
-
-func registerServer() {
-	RegisterElement(Server,
-		func(t *Terminal, arg any) (Element, error) {
-			panic("element factory not implemented for server")
-		},
-
-		func(x circuit.X) (any, error) {
-			return srv.YServer{X: x}, nil
-		})
 }
 
 func registerOnJoin() {

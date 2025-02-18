@@ -47,23 +47,27 @@ func makeContainer(opts *c.ContainerCreateOptions) (Container, error) {
 	// determine name
 	opts.Name = element.ElementName(opts.Name)
 
+	//log.Printf("cmd line: %s %v", podman.Path, args)
+
+	// Create a new container
+	con := &container{
+		name: opts.Name,
+		exit: make(chan error, 1),
+	}
+
 	// Create a new exec.Cmd
 	args := opts.CmdLine(opts.Name)
-	log.Printf("cmd line: %s %v", podman.Path, args)
+
 	cmd := exec.Command(podman.Path, args...)
+	_, con.stdin = interruptible.BufferPipe(element.StdBufferLen)
 	r, err := cmd.Output()
 	if err != nil {
 		log.Printf("error running command: %s %v - error:%v", podman.Path, args, err)
 		return nil, err
 	}
 
-	// Create a new container
-	con := &container{
-		name: opts.Name,
-		id:   string(r),
-		exit: make(chan error, 1),
-		cmd:  cmd,
-	}
+	con.id = string(r)
+	fmt.Printf("container-id: %s", con.id)
 
 	// GC...
 	runtime.SetFinalizer(con,
@@ -180,7 +184,6 @@ func (con *container) Start() error {
 	}
 
 	con.cmd = exec.Command(podman.Path, "start", con.name)
-
 	con.cmd.Stdin, con.stdin = interruptible.BufferPipe(element.StdBufferLen)
 	con.stdout, con.cmd.Stdout = interruptible.BufferPipe(element.StdBufferLen)
 	con.stderr, con.cmd.Stderr = interruptible.BufferPipe(element.StdBufferLen)
@@ -239,8 +242,9 @@ func (con *container) X() circuit.X {
 func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
 	opts, ok := arg.(c.ContainerCreateOptions)
 	if !ok {
-		return nil, fmt.Errorf("invalid argument, arg=%T", arg)
+		return nil, fmt.Errorf("invalid argument to container element factory, arg=%T", arg)
 	}
+
 	x, err := makeContainer(&opts)
 	if err != nil {
 		return nil, err

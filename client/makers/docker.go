@@ -9,17 +9,13 @@ import (
 
 func init() {
 	client.RegisterElementMaker(&dockerElementMaker{
-		client.NewBaseElementMaker("docker", reflect.TypeOf(docker.YContainer{})),
+		client.NewBaseElementMaker("docker", DockerType),
 	})
 }
 
-var DockerType = reflect.TypeOf(docker.YContainer{})
+var DockerType = reflect.TypeOf((*docker.Container)(nil)).Elem()
 
 // implementation for a specific maker
 type dockerElementMaker struct {
 	client.BaseElementMaker
-}
-
-func (c *dockerElementMaker) Get(v any) any {
-	return v.(docker.YContainer)
 }

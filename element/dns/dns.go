@@ -13,16 +13,13 @@ import (
 	"sync"
 
 	"github.com/gocircuit/circuit/anchor"
+	"github.com/gocircuit/circuit/client"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/miekg/dns"
 )
 
 type Nameserver interface {
-	Scrub()
-	Set(rr string) error
-	Unset(name string)
-	Peek() Stat
-	PeekBytes() []byte
+	client.Nameserver
 	X() circuit.X
 }
 
@@ -34,18 +31,7 @@ type nameserver struct {
 }
 
 func init() {
-	anchor.RegisterElement("dns",
-		func(t *anchor.Terminal, arg any) (anchor.Element, error) {
-			ns, err := MakeNameserver(arg.(string))
-			if err != nil {
-				return nil, err
-			}
-			return ns, nil
-		},
-
-		func(x circuit.X) (any, error) {
-			return YNameserver{x}, nil
-		})
+	anchor.RegisterElement("dns", ef, yf)
 }
 
 func MakeNameserver(addr string) (_ Nameserver, err error) {
@@ -128,10 +114,10 @@ func (ns *nameserver) Unset(name string) {
 	delete(ns.rr, name)
 }
 
-func (ns *nameserver) Peek() Stat {
+func (ns *nameserver) Peek() client.NameserverStat {
 	ns.Lock()
 	defer ns.Unlock()
-	var stat Stat
+	var stat client.NameserverStat
 	stat.Address = ns.addr.String()
 	stat.Records = make(map[string][]string)
 	for name, rr := range ns.rr {
@@ -147,4 +133,16 @@ func (ns *nameserver) Peek() Stat {
 func (ns *nameserver) PeekBytes() []byte {
 	b, _ := json.MarshalIndent(ns.Peek(), "", "\t")
 	return b
+}
+
+func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
+	ns, err := MakeNameserver(arg.(string))
+	if err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+func yf(x circuit.X) (any, error) {
+	return YNameserver{x}, nil
 }

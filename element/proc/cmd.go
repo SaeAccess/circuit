@@ -7,31 +7,28 @@
 
 package proc
 
-import (
-	"encoding/json"
-)
-
 // Cmd …
-type Cmd struct {
-	Env   []string `json:"env"`
-	Dir   string   `json:"dir"`
-	Path  string   `json:"path"`
-	Args  []string `json:"args"`
-	Scrub bool     `json:"scrub"`
-}
+// type Cmd struct {
+// 	client.Cmd
+// Env   []string `json:"env"`
+// Dir   string   `json:"dir"`
+// Path  string   `json:"path"`
+// Args  []string `json:"args"`
+// Scrub bool     `json:"scrub"`
+// }
 
-func ParseCmd(src string) (*Cmd, error) {
-	x := &Cmd{}
-	if err := json.Unmarshal([]byte(src), x); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
+// func ParseCmd(src string) (*Cmd, error) {
+// 	x := &Cmd{}
+// 	if err := json.Unmarshal([]byte(src), x); err != nil {
+// 		return nil, err
+// 	}
+// 	return x, nil
+// }
 
-func (x Cmd) String() string {
-	b, err := json.MarshalIndent(x, "", "\t")
-	if err != nil {
-		panic(0)
-	}
-	return string(b)
-}
+// func (x Cmd) String() string {
+// 	b, err := json.MarshalIndent(x, "", "\t")
+// 	if err != nil {
+// 		panic(0)
+// 	}
+// 	return string(b)
+// }

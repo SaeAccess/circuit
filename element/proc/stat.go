@@ -11,12 +11,15 @@ import (
 	"encoding/json"
 	"strings"
 	"syscall"
+
+	"github.com/gocircuit/circuit/client"
 )
 
 type Stat struct {
-	Cmd   Cmd    `json:"cmd"`
-	Exit  error  `json:"exit"`
-	Phase string `json:"phase"`
+	client.ProcStat
+	// Cmd   Cmd    `json:"cmd"`
+	// Exit  error  `json:"exit"`
+	// Phase string `json:"phase"`
 }
 
 func (s Stat) String() string {

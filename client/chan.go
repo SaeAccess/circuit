@@ -8,6 +8,7 @@
 package client
 
 import (
+	"encoding/json"
 	"io"
 )
 
@@ -20,7 +21,6 @@ import (
 //
 // All methods panic if the server hosting the channel dies.
 type Chan interface {
-
 	// Send blocks until the requested transmission is matched to a receiving call to Recv, or
 	// until it can be accommodated in the channel's buffer.
 	// It returns a WriteCloser representing a byte pipe to the receiver, or a non-nil error
@@ -32,6 +32,8 @@ type Chan interface {
 
 	// Close closes the channel, reporting an error only if the channel has already been closed.
 	Close() error
+
+	PeekBytes() []byte
 
 	// Recv blocks until it can be matched with a sender.
 	// It returns a ReadCloser for the byte pipe from the sender, or a non-nil error if the
@@ -49,19 +51,29 @@ type Chan interface {
 type ChanStat struct {
 
 	// Cap is the channel capacity.
-	Cap int
+	Cap int `json:"cap,omitempty"`
+
+	Opened bool `json:"opened,omitempty"`
 
 	// Closed is set as soon as Close is called.
 	// If Closed is set, the channel might still have messages in its buffer and
 	// thus its receive side remains operational.
-	Closed bool
+	Closed bool `json:"closed,omitempty"`
 
 	// Aborted is set if the channel has been permanently aborted and is not usable any longer.
-	Aborted bool
+	Aborted bool `json:"aborted,omitempty"`
 
 	// NumSend is the number of completed invocations to Send.
-	NumSend int
+	NumSend int `json:"numsend,omitempty"`
 
 	// NumRecv is the number of completed invocations to Recv.
-	NumRecv int
+	NumRecv int `json:"numrecv,omitempty"`
+}
+
+func (s *ChanStat) String() string {
+	b, err := json.MarshalIndent(s, "", "\t")
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }

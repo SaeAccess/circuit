@@ -30,6 +30,17 @@ import (
 	"time"
 
 	"github.com/gocircuit/circuit/client"
+	"github.com/gocircuit/circuit/client/makers"
+	_ "github.com/gocircuit/circuit/element/dns"
+	_ "github.com/gocircuit/circuit/element/docker"
+	_ "github.com/gocircuit/circuit/element/podman/container"
+	_ "github.com/gocircuit/circuit/element/podman/network"
+	_ "github.com/gocircuit/circuit/element/podman/pod"
+	_ "github.com/gocircuit/circuit/element/podman/volume"
+	_ "github.com/gocircuit/circuit/element/proc"
+	_ "github.com/gocircuit/circuit/element/server"
+	_ "github.com/gocircuit/circuit/element/valve"
+	_ "github.com/gocircuit/circuit/element/wasm"
 )
 
 // pickServer returns the root anchor of a randomly-chosen circuit server in the cluster.
@@ -49,7 +60,7 @@ func waitFotPayloadDeath(c *client.Client, payloadAnchor string) (recov interfac
 	t := c.Walk(client.Split(payloadAnchor)) // Access the process anchor of the currently-running payload of the virus.
 	t.Get().(client.Proc).Wait()             // Wait until the payload process exits.
 	t.Scrub()                                // scrub payload anchor from old process element
-	time.Sleep(2 * time.Second)              // Wait a touch to slow down the spin
+	time.Sleep(10 * time.Second)             // Wait a touch to slow down the spin
 	return
 }
 
@@ -87,12 +98,13 @@ func spawnPayload(c *client.Client) (payloadAnchor string) {
 		Path: "/usr/bin/echo", // say is a standard OSX command which speaks, so it's easy to hear the virus in action.
 		Args: []string{"i am a virus"},
 	}
-	a := pickServer(c)                                                      // Randomly choose a circuit server to host the virus payload.
-	pservice, err := a.Walk([]string{"virus", "payload"}).MakeProc(service) // Run the payload process
+	a := pickServer(c)                                                            // Randomly choose a circuit server to host the virus payload.
+	p, err := a.Walk([]string{"virus", "payload"}).Make(makers.ProcType, service) // Run the payload process
 	if err != nil {
 		println("payload not created:", err.Error())
 		os.Exit(1)
 	}
+	pservice := p.(client.Proc)
 	if err := pservice.Peek().Exit; err != nil {
 		println("payload not started:", err.Error())
 		pservice.Scrub()
@@ -114,11 +126,12 @@ func spawnNucleus(c *client.Client, payloadAnchor string) {
 			nucleusAnchor, // anchor of the spawned nucleus itself
 		},
 	}
-	pnucleus, err := b.Walk([]string{"virus", "nucleus"}).MakeProc(nucleus)
+	p, err := b.Walk([]string{"virus", "nucleus"}).Make(makers.ProcType, nucleus)
 	if err != nil {
 		println("nucleus not created:", err.Error())
 		os.Exit(1)
 	}
+	pnucleus := p.(client.Proc)
 	if err := pnucleus.Peek().Exit; err != nil {
 		println("nucleus not started:", err.Error())
 		os.Exit(1)

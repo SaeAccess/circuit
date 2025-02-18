@@ -7,17 +7,15 @@ import (
 	"github.com/gocircuit/circuit/element/wasm"
 )
 
+var WasmType = reflect.TypeOf((*wasm.Wasm)(nil)).Elem()
+
 func init() {
 	client.RegisterElementMaker(&wasmElementMaker{
-		client.NewBaseElementMaker("wasm", reflect.TypeOf(wasm.YWasm{})),
+		client.NewBaseElementMaker("wasm", WasmType),
 	})
 }
 
 // implementation for a specific maker
 type wasmElementMaker struct {
 	client.BaseElementMaker
-}
-
-func (c *wasmElementMaker) Get(v any) any {
-	return v.(wasm.YWasm)
 }

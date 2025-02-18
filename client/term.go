@@ -66,6 +66,10 @@ type Anchor interface {
 	Path() string
 }
 
+// Alias these since they are both Subscription and would cause collision in ElementMaker map
+type Leave Subscription
+type Join Subscription
+
 // Split breaks up an anchor path into components.
 func Split(walk string) (r []string) {
 	var j int
@@ -114,8 +118,14 @@ func (t terminal) View() map[string]Anchor {
 	return w
 }
 
-// Single Make method for anchor impl
+// Single Make method for anchor impl. The specified type argument should be a registered
+// interface that the terminal knows how to make
 func (t terminal) Make(typ reflect.Type, arg any) (any, error) {
+	// type should be interface type that is registered as a maker type
+	if typ.Kind() != reflect.Interface {
+		return nil, fmt.Errorf("Make requires an interface reflected type that was registered as a maker")
+	}
+
 	// Get the maker for the specified type
 	maker, ok := GetElementMaker(typ)
 	if !ok {
@@ -128,7 +138,7 @@ func (t terminal) Make(typ reflect.Type, arg any) (any, error) {
 	}
 
 	// Validate the type, maybe maker didnt
-	if reflect.TypeOf(el) != typ {
+	if !reflect.TypeOf(el).Implements(typ) {
 		return nil, fmt.Errorf("mismatch element maker types, %s != %s", reflect.TypeOf(el).Name(), typ.Name())
 	}
 
@@ -136,20 +146,41 @@ func (t terminal) Make(typ reflect.Type, arg any) (any, error) {
 }
 
 func (t terminal) Get() any {
-	k, y := t.y.Get()
+	_, y := t.y.Get()
 	if y == nil {
 		return nil
 	}
 
-	// Get the maker for the specified type
-	maker, ok := GetElementMaker(reflect.TypeOf(y))
-	if !ok {
-		panic(fmt.Sprintf("client/circuit mismatch, kind=%v", k))
-	}
-
-	return maker.Get(y)
+	return y
 }
 
 func (t terminal) Scrub() {
 	t.y.Scrub()
+}
+
+func GetElement[T any](a Anchor, path []string) T {
+	el := a.Walk(path).Get()
+	v, ok := el.(T)
+	if !ok {
+		var t T
+		return t
+	}
+
+	return v
+}
+
+func MakeElement[T any](a Anchor, arg any, path ...string) (T, error) {
+	mt := reflect.TypeOf((*T)(nil)).Elem()
+	el, err := a.Walk(path).Make(mt, arg)
+	var t T
+	if err != nil {
+		return t, err
+	}
+
+	v, ok := el.(T)
+	if !ok {
+		return t, err
+	}
+
+	return v, nil
 }

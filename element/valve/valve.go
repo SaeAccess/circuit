@@ -9,23 +9,18 @@ package valve
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"sync"
 
 	"github.com/gocircuit/circuit/anchor"
+	"github.com/gocircuit/circuit/client"
 	"github.com/gocircuit/circuit/use/circuit"
 )
 
 type Valve interface {
-	Send() (io.WriteCloser, error)
+	client.Chan
 	IsDone() bool
-	Scrub()
-	Close() error
-	Recv() (io.ReadCloser, error)
-	Cap() int
-	Stat() Stat
-	PeekBytes() []byte
 	X() circuit.X
 }
 
@@ -43,45 +38,21 @@ type valve struct {
 	ctrl struct {
 		sync.Mutex
 		abr  chan<- struct{}
-		stat Stat
+		stat client.ChanStat
 	}
 }
 
-type Stat struct {
-	Cap     int  `json:"cap"`
-	Opened  bool `json:"opened"`
-	Closed  bool `json:"closed"`
-	Aborted bool `json:"aborted"`
-	NumSend int  `json:"numsend"`
-	NumRecv int  `json:"numrecv"`
-}
+// type Stat struct {
+// 	client.ChanStat
+// 	Opened bool `json:"opened,omitempty"`
+// }
 
 func init() {
-	anchor.RegisterElement("chan",
-		func(t *anchor.Terminal, arg any) (anchor.Element, error) {
-			capacity, ok := arg.(int)
-			if !ok {
-				return nil, errors.New("invalid argument")
-			}
-
-			return &scrubValve{t, MakeValve(capacity)}, nil
-		},
-
-		func(x circuit.X) (any, error) {
-			return YValve{X: x}, nil
-		})
+	anchor.RegisterElement("chan", ef, yf)
 }
 
 // Sender-receiver pipe capacity (once matched)
 const MessageCap = 32e3 // 32K
-
-func (s *Stat) String() string {
-	b, err := json.MarshalIndent(s, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	return string(b)
-}
 
 func MakeValve(n int) Valve {
 	v := &valve{}
@@ -118,7 +89,7 @@ func (v *valve) Cap() int {
 	return -1
 }
 
-func (v *valve) Stat() Stat {
+func (v *valve) Stat() client.ChanStat {
 	v.ctrl.Lock()
 	defer v.ctrl.Unlock()
 	return v.ctrl.stat
@@ -150,4 +121,17 @@ func (v *scrubValve) Recv() (io.ReadCloser, error) {
 		}
 	}()
 	return v.Valve.Recv()
+}
+
+func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
+	capacity, ok := arg.(int)
+	if !ok {
+		return nil, fmt.Errorf("invalid argument to chan element factory, arg=%T", arg)
+	}
+
+	return &scrubValve{t, MakeValve(capacity)}, nil
+}
+
+func yf(x circuit.X) (any, error) {
+	return YValve{X: x}, nil
 }

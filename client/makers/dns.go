@@ -1,21 +1,20 @@
 package makers
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/gocircuit/circuit/anchor"
 	"github.com/gocircuit/circuit/client"
-	"github.com/gocircuit/circuit/element/dns"
+	"github.com/pkg/errors"
 )
 
 func init() {
 	client.RegisterElementMaker(&dnsElementMaker{
-		client.NewBaseElementMaker("dns", reflect.TypeOf(dns.YNameserver{})),
+		client.NewBaseElementMaker("dns", NameserverType),
 	})
 }
 
-var NameserverType = reflect.TypeOf(dns.YNameserver{})
+var NameserverType = reflect.TypeOf((*client.Nameserver)(nil)).Elem()
 
 // implementation for a specific maker
 type dnsElementMaker struct {
@@ -29,30 +28,25 @@ func (b *dnsElementMaker) Make(y anchor.YTerminal, arg any) (any, error) {
 	}
 
 	// Check type of v
-	if reflect.TypeOf(v) != b.Type() {
-		return nil, fmt.Errorf("client/circuit mismatch, kind=%v", b.Name())
-
+	if !reflect.TypeOf(v).Implements(NameserverType) {
+		return nil, errors.Wrapf(client.ErrMismatchType, "%v does not implement %v", reflect.TypeOf(v), NameserverType)
 	}
 
 	// v can now be type asserted to t whithout error
-	return yNameserver{v.(dns.YNameserver)}, nil
+	return v, nil //yNameserver{v.(dns.YNameserver)}, nil
 }
 
-func (c *dnsElementMaker) Get(v any) any {
-	return yNameserver{v.(dns.YNameserver)}
-}
+// func nameserverStat(s dns.Stat) client.NameserverStat {
+// 	return client.NameserverStat{
+// 		Address: s.Address,
+// 		Records: s.Records,
+// 	}
+// }
 
-func nameserverStat(s dns.Stat) client.NameserverStat {
-	return client.NameserverStat{
-		Address: s.Address,
-		Records: s.Records,
-	}
-}
+// type yNameserver struct {
+// 	dns.YNameserver
+// }
 
-type yNameserver struct {
-	dns.YNameserver
-}
-
-func (y yNameserver) Peek() client.NameserverStat {
-	return nameserverStat(y.YNameserver.Peek())
-}
+// func (y yNameserver) Peek() client.NameserverStat {
+// 	return nameserverStat(y.YNameserver.Peek())
+// }

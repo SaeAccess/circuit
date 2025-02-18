@@ -10,6 +10,7 @@ package proc
 import (
 	"io"
 
+	"github.com/gocircuit/circuit/client"
 	xio "github.com/gocircuit/circuit/kit/x/io"
 	"github.com/gocircuit/circuit/use/circuit"
 	"github.com/gocircuit/circuit/use/errors"
@@ -23,19 +24,20 @@ type XProc struct {
 	Proc
 }
 
-func unpack(stat Stat) Stat {
-	stat.Exit = errors.Unpack(stat.Exit)
-	return stat
-}
+// func unpack(stat Stat) Stat {
+// 	stat.Exit = errors.Unpack(stat.Exit)
+// 	return stat
+// }
 
-func pack(stat Stat) Stat {
-	stat.Exit = errors.Pack(stat.Exit)
-	return stat
-}
+// func pack(stat Stat) Stat {
+// 	stat.Exit = errors.Pack(stat.Exit)
+// 	return stat
+// }
 
-func (x XProc) Wait() (Stat, error) {
+func (x XProc) Wait() (client.ProcStat, error) {
 	stat, err := x.Proc.Wait()
-	return pack(stat), errors.Pack(err)
+	stat.Exit = errors.Pack(stat.Exit)
+	return stat, errors.Pack(err)
 }
 
 func (x XProc) Signal(sig string) error {
@@ -54,8 +56,10 @@ func (x XProc) Stderr() circuit.X {
 	return xio.NewXReadCloser(x.Proc.Stderr())
 }
 
-func (x XProc) Peek() Stat {
-	return pack(x.Proc.Peek())
+func (x XProc) Peek() client.ProcStat {
+	ps := x.Proc.Peek()
+	ps.Exit = errors.Pack(ps.Exit)
+	return ps
 }
 
 func (x XProc) PeekBytes() []byte {
@@ -66,9 +70,11 @@ type YProc struct {
 	X circuit.X
 }
 
-func (y YProc) Wait() (Stat, error) {
+func (y YProc) Wait() (client.ProcStat, error) {
 	r := y.X.Call("Wait")
-	return unpack(r[0].(Stat)), errors.Unpack(r[1])
+	ps := r[0].(client.ProcStat)
+	ps.Exit = errors.Unpack(ps.Exit)
+	return ps, errors.Unpack(r[1])
 }
 
 func (y YProc) Signal(sig string) error {
@@ -84,16 +90,18 @@ func (y YProc) GetEnv() []string {
 	return y.X.Call("GetEnv")[0].([]string)
 }
 
-func (y YProc) GetCmd() Cmd {
-	return y.X.Call("GetCmd")[0].(Cmd)
+func (y YProc) GetCmd() client.Cmd {
+	return y.X.Call("GetCmd")[0].(client.Cmd)
 }
 
 func (y YProc) IsDone() bool {
 	return y.X.Call("IsDone")[0].(bool)
 }
 
-func (y YProc) Peek() Stat {
-	return unpack(y.X.Call("Peek")[0].(Stat))
+func (y YProc) Peek() client.ProcStat {
+	ps := y.X.Call("Peek")[0].(client.ProcStat)
+	ps.Exit = errors.Unpack(ps.Exit)
+	return ps
 }
 
 func (y YProc) PeekBytes() []byte {

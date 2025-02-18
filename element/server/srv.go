@@ -15,6 +15,8 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/gocircuit/circuit/anchor"
+	cli "github.com/gocircuit/circuit/client/server"
 	"github.com/gocircuit/circuit/kit/interruptible"
 	"github.com/gocircuit/circuit/tissue"
 	"github.com/gocircuit/circuit/use/circuit"
@@ -22,12 +24,7 @@ import (
 )
 
 type Server interface {
-	Profile(string) (io.ReadCloser, error)
-	Peek() Stat
-	PeekBytes() []byte
-	Rejoin(string) error // circuit address to join to
-	Suicide()
-	IsDone() bool
+	cli.Server
 	Scrub()
 	X() circuit.X
 }
@@ -39,21 +36,16 @@ type server struct {
 	joined time.Time
 }
 
+func init() {
+	anchor.RegisterElement("server", ef, yf)
+}
+
 func New(kin *tissue.Kin) Server {
 	return &server{
 		addr:   kin.Avatar().X.Addr().String(),
 		kin:    kin,
 		joined: time.Now(),
 	}
-}
-
-type Stat struct {
-	Addr   string
-	Joined time.Time
-
-	// TODO - put some runtime metrics for the server here and also add a  map for adding metadata
-	// for the server.  This can be used for scheduling elements and runtime behavior reporting.
-	// ex. HostInfo from podman
 }
 
 func (s *server) Rejoin(addr string) error {
@@ -90,8 +82,8 @@ func (nopCloser) Close() error {
 	return nil
 }
 
-func (s *server) Peek() Stat {
-	return Stat{
+func (s *server) Peek() cli.ServerStat {
+	return cli.ServerStat{
 		Addr:   s.addr,
 		Joined: s.joined,
 	}
@@ -110,4 +102,12 @@ func (s *server) Scrub() {}
 
 func (s *server) X() circuit.X {
 	return circuit.Ref(XServer{s})
+}
+
+func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
+	panic("element factory not implemented for server")
+}
+
+func yf(x circuit.X) (any, error) {
+	return YServer{X: x}, nil
 }

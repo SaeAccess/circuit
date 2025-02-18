@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/gocircuit/circuit/client"
+	"github.com/gocircuit/circuit/client/makers"
 )
 
 var flagAddr = flag.String("addr", "", "circuit server address, looks like circuit://...")
@@ -75,12 +76,13 @@ func runShellStdin(host client.Anchor, cmd, stdin string) (string, error) {
 		}
 	}()
 	job := host.Walk([]string{"shelljob", strconv.Itoa(rand.Int())})
-	proc, _ := job.MakeProc(client.Cmd{
+	p, _ := job.Make(makers.ProcType, client.Cmd{
 		Path:  "/bin/sh",
 		Dir:   "/tmp",
 		Args:  []string{"-c", cmd},
 		Scrub: true,
 	})
+	proc := p.(client.Proc)
 	go func() {
 		io.Copy(proc.Stdin(), bytes.NewBufferString(stdin))
 		proc.Stdin().Close() // Must close the standard input of the shell process.

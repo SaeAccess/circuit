@@ -19,22 +19,14 @@ import (
 	"syscall"
 
 	"github.com/gocircuit/circuit/anchor"
+	"github.com/gocircuit/circuit/client"
 	"github.com/gocircuit/circuit/kit/interruptible"
 	"github.com/gocircuit/circuit/use/circuit"
 )
 
 type Proc interface {
-	Scrub()
-	Wait() (Stat, error)
-	Signal(sig string) error
-	GetEnv() []string
-	GetCmd() Cmd
+	client.Proc
 	IsDone() bool
-	Peek() Stat
-	PeekBytes() []byte
-	Stdin() io.WriteCloser
-	Stdout() io.ReadCloser
-	Stderr() io.ReadCloser
 	X() circuit.X
 }
 
@@ -55,34 +47,10 @@ type proc struct {
 }
 
 func init() {
-	anchor.RegisterElement("proc",
-		func(t *anchor.Terminal, arg any) (anchor.Element, error) {
-			cmd, ok := arg.(Cmd)
-			if !ok {
-				return nil, errors.New("invalid argument")
-			}
-			elem := makeProc(cmd)
-
-			go func() {
-				defer func() {
-					recover()
-				}()
-				if cmd.Scrub {
-					defer t.Scrub()
-				}
-				elem.Wait()
-			}()
-
-			return elem, nil
-		},
-
-		func(x circuit.X) (any, error) {
-			return YProc{x}, nil
-		})
-
+	anchor.RegisterElement("proc", ef, yf)
 }
 
-func makeProc(cmd Cmd) Proc {
+func makeProc(cmd client.Cmd) Proc {
 	p := &proc{}
 	// std*
 	p.cmd.cmd.Stdin, p.stdin = interruptible.BufferPipe(32e3)
@@ -140,7 +108,7 @@ func (p *proc) Scrub() {
 	p.cmd.abr = nil
 }
 
-func (p *proc) Wait() (Stat, error) {
+func (p *proc) Wait() (client.ProcStat, error) {
 	select {
 	case exit, ok := <-p.wait:
 		if !ok {
@@ -151,7 +119,7 @@ func (p *proc) Wait() (Stat, error) {
 		p.cmd.exit = exit
 		return p.peek(), nil
 	case <-p.abr:
-		return Stat{}, errors.New("aborted")
+		return client.ProcStat{}, errors.New("aborted")
 	}
 }
 
@@ -171,10 +139,10 @@ func (p *proc) GetEnv() []string {
 	return os.Environ()
 }
 
-func (p *proc) GetCmd() Cmd {
+func (p *proc) GetCmd() client.Cmd {
 	p.cmd.Lock()
 	defer p.cmd.Unlock()
-	return Cmd{
+	return client.Cmd{
 		Env:   p.cmd.cmd.Env,
 		Path:  p.cmd.cmd.Path,
 		Args:  p.cmd.cmd.Args[1:],
@@ -195,7 +163,7 @@ func (p *proc) IsDone() bool {
 	return false
 }
 
-func (p *proc) Peek() Stat {
+func (p *proc) Peek() client.ProcStat {
 	p.cmd.Lock()
 	defer p.cmd.Unlock()
 	return p.peek()
@@ -206,9 +174,9 @@ func (p *proc) PeekBytes() []byte {
 	return b
 }
 
-func (p *proc) peek() Stat {
-	return Stat{
-		Cmd: Cmd{
+func (p *proc) peek() client.ProcStat {
+	return client.ProcStat{
+		Cmd: client.Cmd{
 			Env:   p.cmd.cmd.Env,
 			Path:  p.cmd.cmd.Path,
 			Args:  p.cmd.cmd.Args[1:],
@@ -239,4 +207,28 @@ func (p *proc) phase() Phase {
 		return Continued
 	}
 	panic(0)
+}
+
+func ef(t *anchor.Terminal, arg any) (anchor.Element, error) {
+	cmd, ok := arg.(client.Cmd)
+	if !ok {
+		return nil, fmt.Errorf("invalid argument to proc element, expecting type client.Cmd got %T", arg)
+	}
+	elem := makeProc(cmd)
+
+	go func() {
+		defer func() {
+			recover()
+		}()
+		if cmd.Scrub {
+			defer t.Scrub()
+		}
+		elem.Wait()
+	}()
+
+	return elem, nil
+}
+
+func yf(x circuit.X) (any, error) {
+	return YProc{x}, nil
 }
